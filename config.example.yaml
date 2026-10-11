@@ -12,6 +12,9 @@ server:
   # secret: ${YTNOTI_SECRET:-}   # optional fixed HMAC secret (random per start if unset)
   # log_level: INFO              # DEBUG | INFO | WARNING | ERROR
   # verify_channels: true        # set false if channel-ID verification misfires
+  # Validate this file, print a summary and exit instead of running (same as the
+  # --check flag). While true the service will not start; set false to run.
+  # check_only: false
   # Send sample notifications every time the service starts, no CLI flag needed:
   #   true | false | a list of events, e.g. [upload, live].  Uses the first channel.
   # Turn it off once verified: every restart posts the samples again.

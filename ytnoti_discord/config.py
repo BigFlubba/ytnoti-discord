@@ -144,6 +144,10 @@ class ServerCfg(_Section):
     # any non-200 as "invalid". Set false if that check misfires on your network.
     verify_channels: bool = True
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Validate the config, print the summary and exit instead of running, exactly
+    # like `--check` -- but set from the file, so no container flag is needed.
+    # While true the service will not start: set it back to false to run normally.
+    check_only: bool = False
     # Send sample notifications at every start, with no CLI flag needed:
     # false (default) | true (all five events) | a list such as [upload, live].
     # Handy for checking routing after a deploy; turn it off afterwards, since

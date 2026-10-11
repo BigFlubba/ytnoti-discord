@@ -28,6 +28,18 @@ You need **(1)** a Discord webhook URL (Channel settings → Integrations → We
 **(2)** YouTube channel IDs (`UC…`, 24 chars; `@handles` are not accepted), and
 **(3)** a public HTTPS URL that forwards to the container's port 8000 (next section).
 
+## Choosing the config file and check mode
+
+The project's own `config.yaml` is used by default. Lookup order: `-c/--config`, then
+`$CONFIG_PATH` (the Docker image sets it to `/config/config.yaml`), then `./config.yaml`
+in the current directory, then `config.yaml` in the project folder, and finally
+`/config/config.yaml`. `--check` prints which file was loaded.
+
+`--check` can also be driven from the file: set `server.check_only: true` to validate
+the config, print the summary and exit without starting the service (the container then
+exits with code 0, or 2 on a config error). Set it back to `false` to run normally. An
+explicit `--test` flag still works while it is set.
+
 ## The public callback URL (the one non-obvious requirement)
 
 YouTube's hub *calls you*, so `server.callback_url` must be reachable from the internet.
