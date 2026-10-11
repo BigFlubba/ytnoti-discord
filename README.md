@@ -43,6 +43,13 @@ Cloudflare Tunnel or nginx work the same way: forward the callback URL's path to
 `http://<container>:8000`. Then set `callback_url: https://yt.example.com/ytnoti`
 (any path works, including `/`). Prefer HTTPS.
 
+The callback endpoint is hardened beyond the library defaults: hub verification is
+answered only for your configured channels (unknown topics get 404, malformed
+parameters 400, always as `text/plain`), pushes need a well-formed `X-Hub-Signature`
+that matches the HMAC (otherwise 401), bodies over 1 MiB get 413, and unexpected errors
+return empty 4xx/5xx responses instead of tracebacks. The `Server` header is omitted.
+Put rate limiting in your reverse proxy if the URL is exposed to untrusted traffic.
+
 **On startup the container requests its own callback URL** and needs HTTP 200
 (no redirects) before it subscribes. `/healthz` and the Docker health status only turn
 healthy once that works.
