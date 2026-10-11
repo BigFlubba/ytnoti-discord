@@ -32,6 +32,8 @@ from .youtube import YouTubeClient
 
 log = logging.getLogger("ytnoti_discord")
 
+DOCKER_CONFIG_PATH = "/config/config.yaml"
+
 
 class _Throttle(logging.Filter):
     """The library retries its startup self-test every 0.5s; log it sparsely."""
@@ -123,7 +125,29 @@ def _http_client() -> httpx.AsyncClient:
 # --check / --test
 # --------------------------------------------------------------------------- #
 
-def print_summary(cfg: Config) -> None:
+def resolve_config_path(explicit: str | None = None, *, env: str | None = None,
+                        cwd: Path | None = None) -> str:
+    """Pick the config file. The project's own config.yaml is looked at first.
+
+    Order: -c/--config, then $CONFIG_PATH, then ./config.yaml (current directory),
+    then config.yaml next to the package (the project folder), then the Docker
+    default /config/config.yaml (also the fallback if none of them exist).
+    """
+    if explicit:
+        return explicit
+    if env:
+        return env
+    candidates = [(cwd or Path.cwd()) / "config.yaml",
+                  Path(__file__).resolve().parent.parent / "config.yaml"]
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return DOCKER_CONFIG_PATH
+
+
+def print_summary(cfg: Config, config_path: str | None = None) -> None:
+    if config_path:
+        print(f"Config file  : {config_path}")
     print(f"Callback URL : {cfg.server.callback_url}")
     print(f"Listening on : {cfg.server.host}:{cfg.server.port}")
     if cfg.server.test_on_start:
@@ -346,16 +370,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="ytnoti_discord",
         description="YouTube upload/edit/delete/live notifications -> Discord webhooks.")
-    parser.add_argument("-c", "--config", default=os.environ.get("CONFIG_PATH", "/config/config.yaml"))
-    parser.add_argument("--check", action="store_true", help="validate the config and exit")
+    parser.add_argument("-c", "--config", default=None,
+                        help="config file (default: $CONFIG_PATH, else ./config.yaml in the "
+                             f"project folder, else {DOCKER_CONFIG_PATH})")
+    parser.add_argument("--check", action="store_true",
+                        help="validate the config and exit (or set server.check_only)")
     parser.add_argument("--test", nargs="*", metavar="EVENT", default=None,
                         help=f"send sample messages ({', '.join(EVENT_NAMES)}); "
                              "no event names = all enabled events")
     parser.add_argument("--channel", help="channel ID to use for --test (default: first)")
     args = parser.parse_args(argv)
 
+    config_path = resolve_config_path(args.config, env=os.environ.get("CONFIG_PATH"))
     try:
-        cfg = load_config(args.config)
+        cfg = load_config(config_path)
     except ConfigError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
