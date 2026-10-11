@@ -1,0 +1,81 @@
+# ytnoti-discord configuration. Copy to config.yaml and edit.
+#
+# Values may reference environment variables:  ${VAR}  or  ${VAR:-default}
+# Quote any string that contains  { } : #  or starts with  @ " ' [  (YAML rules).
+# In message templates, write a literal brace as {{ or }}.
+
+server:
+  # REQUIRED. The public HTTPS URL that reaches this container's port 8000.
+  # YouTube's hub calls this URL, so it must be reachable from the internet.
+  # The path (here /ytnoti) is where the container listens; "/" also works.
+  callback_url: https://yt.example.com/ytnoti
+  # secret: ${YTNOTI_SECRET:-}   # optional fixed HMAC secret (random per start if unset)
+  # log_level: INFO              # DEBUG | INFO | WARNING | ERROR
+  # verify_channels: true        # set false if channel-ID verification misfires
+
+# Optional. With a key, live/upcoming detection uses the official API (1 quota
+# unit per push). Without it, the public watch page is parsed (less robust).
+# youtube_api_key: ${YOUTUBE_API_KEY:-}
+
+# Named Discord webhooks (Server Settings > Integrations > Webhooks > Copy URL).
+webhooks:
+  main: ${DISCORD_WEBHOOK_URL}
+  # alerts: ${DISCORD_ALERTS_WEBHOOK_URL}
+
+discord:
+  # username: Uploads Bot
+  # avatar_url: https://example.com/avatar.png
+  # By default roles and users can be mentioned but @everyone/@here cannot.
+  # To allow them add "everyone":
+  # allowed_mentions: { parse: [everyone, roles, users] }
+
+# Applied to every channel; per-channel settings override these.
+defaults:
+  webhooks: [main]
+  events:
+    edit:
+      cooldown_seconds: 300         # ignore edits within N s of the last notification
+      only_if_title_changed: false  # true = ignore description-only edits
+    # upcoming:
+    #   enabled: true               # announce scheduled streams (off by default)
+
+channels:
+  # Use the channel ID (UC...), NOT the @handle. Find it at
+  # youtube.com/account_advanced (your own channel) or in a channel page's
+  # "Share channel > Copy channel ID".
+  - id: UCuFFtHWoLl5fauMMD5Ww2jA
+    name: CBC News                  # optional display name (otherwise YouTube's)
+
+  # A second channel with custom routing and messages:
+  # - id: UCxxxxxxxxxxxxxxxxxxxxxx
+  #   webhooks: [main, alerts]
+  #   events:
+  #     live:
+  #       webhooks: [alerts]
+  #       content: "<@&123456789012345678> {channel_name} is LIVE: {title}"
+  #       embed:
+  #         color: "#FF0000"
+  #         fields:
+  #           - { name: "Watch", value: "[Open stream]({url})", inline: true }
+  #     upload:
+  #       embed: false              # no embed: just the content line; Discord
+  #       content: "{url}"          #   unfurls the video player itself
+  #     delete:
+  #       enabled: false
+
+# ---------------------------------------------------------------------------
+# Events:  upload | live | upcoming | edit | delete
+# Per-event keys:
+#   enabled, webhooks, username, avatar_url, content,
+#   embed: { title, url, description, color, author, image, thumbnail,
+#            footer, timestamp (published|updated|now|none), fields }
+#   (edit only) cooldown_seconds, only_if_title_changed
+# Set  embed: false  to send plain text only.
+#
+# Template variables:
+#   {title} {old_title} {change} {url} {video_id} {thumbnail}
+#   {channel_name} {channel_id} {channel_url}
+#   {published} {updated}                    ISO 8601 timestamps
+#   {published_ts} {updated_ts} {scheduled_ts} {deleted_ts}   Unix seconds, for
+#       Discord timestamps such as <t:{scheduled_ts}:R>
+# ---------------------------------------------------------------------------

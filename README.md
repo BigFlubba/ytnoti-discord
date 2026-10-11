@@ -1,0 +1,132 @@
+# ytnoti-discord
+
+A self-hosted Docker container that posts **Discord webhook messages when a YouTube
+channel uploads, edits, deletes a video, or goes live**, driven by one YAML file.
+It wraps the [`ytnoti`](https://github.com/SeoulSKY/ytnoti) library, which receives
+YouTube's push notifications (WebSub/PubSubHubbub): **no polling, no API key, no quota**.
+
+| Event | When it fires |
+|---|---|
+| `upload` | A new video appears |
+| `live` | A live stream starts (sent once per stream) |
+| `upcoming` | A live stream is scheduled (**off by default**) |
+| `edit` | A video's title/details change (title changes show *old → new*) |
+| `delete` | A video is removed |
+
+## Quick start
+
+```bash
+cp config.example.yaml config.yaml     # set callback_url and your channel IDs
+cp .env.example .env                   # put your Discord webhook URL in here
+docker compose run --rm ytnoti-discord --check   # validate config
+docker compose run --rm ytnoti-discord --test    # send sample messages to Discord
+docker compose up -d --build
+docker compose logs -f
+```
+
+You need **(1)** a Discord webhook URL (Channel settings → Integrations → Webhooks),
+**(2)** YouTube channel IDs (`UC…`, 24 chars; `@handles` are not accepted), and
+**(3)** a public HTTPS URL that forwards to the container's port 8000 (next section).
+
+## The public callback URL (the one non-obvious requirement)
+
+YouTube's hub *calls you*, so `server.callback_url` must be reachable from the internet.
+Put a reverse proxy or tunnel in front of port 8000:
+
+```
+# Caddy (automatic HTTPS)
+yt.example.com {
+    reverse_proxy localhost:8000
+}
+```
+Cloudflare Tunnel or nginx work the same way: forward the callback URL's path to
+`http://<container>:8000`. Then set `callback_url: https://yt.example.com/ytnoti`
+(any path works, including `/`). Prefer HTTPS.
+
+**On startup the container requests its own callback URL** and needs HTTP 200
+(no redirects) before it subscribes. `/healthz` and the Docker health status only turn
+healthy once that works.
+
+## Configuration
+
+`config.example.yaml` documents every option. Highlights:
+
+* **Secrets via environment:** `${DISCORD_WEBHOOK_URL}` or `${VAR:-default}` anywhere.
+* **Routing:** several named `webhooks`; set `webhooks:` per channel or per event
+  (e.g. live pings to `#alerts`, uploads to `#videos`).
+* **Messages:** each event has `content` plus an `embed` (or `embed: false` for text
+  only, which lets Discord show its inline YouTube player). Templates support
+  `{title} {old_title} {change} {url} {channel_name} {published_ts} {scheduled_ts} …`.
+  Typos in variable names fail at startup, not at 3 a.m.
+* **Edit noise control:** `cooldown_seconds` (default 300) and `only_if_title_changed`.
+* **Mentions:** `<@&roleid>` works in `content`. `@everyone`/`@here` are blocked unless
+  you add `everyone` to `discord.allowed_mentions.parse`. Video titles are
+  de-fanged in `content` so a title can never ping anyone.
+
+## How "live" detection works (and its limits)
+
+`ytnoti` can't tell a live stream from a normal video: it reports "upload" the first
+time a video appears and "edit" afterwards. This container therefore asks YouTube for
+the video's live state on each push:
+
+* **With `youtube_api_key`** (recommended): official Data API, 1 quota unit per push.
+* **Without a key:** it reads the public watch page. This costs no quota but depends on
+  YouTube's page format, which can change or be blocked/consent-walled from some
+  hosts. If detection fails you'll see a warning, and the event falls back to being
+  treated as a normal upload/edit.
+
+Resulting behavior: a scheduled stream is **silent** until it starts (then one `live`
+message), unless you enable `upcoming`. The end-of-stream feed update is not reported
+as an edit.
+
+## Troubleshooting
+
+* **"Callback URL test failed, retrying…" / unhealthy:** the container can't fetch its
+  own public URL. Check DNS, the proxy target, the certificate, and that the URL
+  doesn't redirect. On a home network without NAT hairpinning, map your domain to
+  the host in `docker-compose.yml` (`extra_hosts: ["yt.example.com:host-gateway"]`).
+* **"Failed to subscribe … might be inaccessible from the public internet":** YouTube's
+  hub could not reach your URL. Test from outside your network.
+* **"Invalid channel ID" for a valid ID:** set `server.verify_channels: false`.
+* **Discord 404/401 in logs:** the webhook was deleted or the URL is wrong.
+* **No state across restarts:** make sure `/data` is a volume. With a bind mount,
+  `chown 10001:10001` the directory (the container runs unprivileged).
+* **Silence the logs?** `server.log_level: WARNING`. Webhook URLs are never logged.
+
+## Notes
+
+* Subscriptions are renewed automatically (the library refreshes before the lease
+  expires) and are re-requested on every start.
+* Deliveries are acknowledged immediately and sent in the background; if Discord is
+  unreachable the send is retried (honoring rate limits) and then dropped, not queued.
+* Run as non-root, read-only filesystem, no capabilities (see `docker-compose.yml`).
+* Edits made only to a video's description show as "details were updated" because the
+  push feed doesn't include the description.
+
+## Continuous integration and releases
+
+GitHub Actions runs on pushes to `main`/`master`, pull requests, and manual
+workflow dispatches. CI tests the Python code on Python 3.12 and 3.13, compiles the
+application and tests, builds the Docker image, and runs a container CLI smoke test.
+Pull requests must pass these checks before they are merged (configure the repository's
+branch protection rules to require the **Python tests** and **Build and smoke-test Docker
+image** checks).
+
+Releases are managed by [Release Please](https://github.com/googleapis/release-please):
+use [Conventional Commit](https://www.conventionalcommits.org/) messages such as
+`fix: handle YouTube feed retries` or `feat: add event filter`. On pushes to the default
+branch, it opens or updates a release PR containing the version and changelog updates.
+Merge that PR to create a GitHub release; the workflow then builds and publishes the
+container to GitHub Container Registry (GHCR) with `latest`, the version, and the release
+tag as tags. The resulting image is `ghcr.io/OWNER/REPOSITORY:latest` (replace `OWNER`
+and `REPOSITORY` with the GitHub repository path). The repository's Actions token needs
+permission to write packages; the workflow requests this for the publishing job.
+
+## Development
+
+```bash
+pip install -r requirements.txt pytest
+python -m pytest tests -q
+python -m ytnoti_discord -c config.yaml --check
+```
+`ytnoti` is MIT-licensed by SeoulSKY.
