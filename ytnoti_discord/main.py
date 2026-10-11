@@ -340,6 +340,11 @@ async def serve(cfg: Config) -> None:
             )
         finally:
             watchdog.cancel()
+            if test_task is not None:
+                try:
+                    await asyncio.wait_for(test_task, timeout=3)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    pass
             if engine.pending:
                 log.info("shutting down; finishing %d in-flight notification(s)",
                          engine.pending)
@@ -377,7 +382,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="validate the config and exit (or set server.check_only)")
     parser.add_argument("--test", nargs="*", metavar="EVENT", default=None,
                         help=f"send sample messages ({', '.join(EVENT_NAMES)}); "
-                             "no event names = all enabled events")
+                             "no event names = all events, including disabled ones")
     parser.add_argument("--channel", help="channel ID to use for --test (default: first)")
     args = parser.parse_args(argv)
 
