@@ -21,6 +21,7 @@ from ytnoti import AsyncYouTubeNotifier
 from ytnoti.models.history import FileVideoHistory
 
 from . import __version__
+from .callback_guard import CallbackGuard, topic_for
 from .diffing import describe_changes
 from .discord_client import DiscordSender
 from .engine import Engine
@@ -253,6 +254,12 @@ async def serve(cfg: Config) -> None:
         password=cfg.server.secret,
         video_history=history,
         app=app,
+    )
+
+    app.add_middleware(
+        CallbackGuard,
+        path=urlparse(cfg.server.callback_url).path or "/",
+        topics={topic_for(channel_id) for channel_id in cfg.channels},
     )
 
     @app.get("/healthz")
