@@ -18,6 +18,9 @@ MAX_RECORDS = 2000
 @dataclass
 class VideoRecord:
     title: str = ""
+    # Snapshot used as the "before" of the next edit. None = never captured.
+    description: str | None = None
+    tags: list[str] | None = None
     channel_id: str = ""
     last_updated: str = ""        # ISO timestamp of the newest feed entry handled
     upload_notified: bool = False
