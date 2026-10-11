@@ -48,6 +48,7 @@ defaults:
     edit:
       cooldown_seconds: 300         # ignore edits within N s of the last notification
       only_if_title_changed: false  # true = ignore description-only edits
+      show_diff: true               # before/after of title, description and tags in {change}
     # upcoming:
     #   enabled: true               # announce scheduled streams (off by default)
 
@@ -81,9 +82,10 @@ channels:
 #   enabled, webhooks, username, avatar_url, content,
 #   embed: { title, url, description, color, author, image, thumbnail,
 #            footer, timestamp (published|updated|now|none), fields }
-#   (edit only) cooldown_seconds, only_if_title_changed
+#   (edit only) cooldown_seconds, only_if_title_changed, show_diff
 # Set  embed: false  to send plain text only.
 #
+# {change} on an edit holds the before/after text (title, description diff, tags).
 # Template variables:
 #   {title} {old_title} {change} {url} {video_id} {thumbnail}
 #   {channel_name} {channel_id} {channel_url}

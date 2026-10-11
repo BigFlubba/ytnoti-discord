@@ -194,3 +194,91 @@ def test_hub_redelivery_is_deduplicated_even_with_no_cooldown(tmp_path, write_cf
     assert len(s.sent) == 2
     assert "uploaded" in s.sent[0][1]["content"]
     assert "Renamed" in s.sent[1][1]["embeds"][0]["description"]
+
+
+# -- before/after diffs on edits ------------------------------------------------------
+
+NO_COOLDOWN = "\ndefaults:\n  events:\n    edit: {cooldown_seconds: 0}\n"
+
+
+def edit_text(sender):
+    return sender.sent[-1][1]["embeds"][0]["description"]
+
+
+def test_edit_shows_description_and_tag_before_after(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg, NO_COOLDOWN)
+    yt.info = LiveInfo("none", description="Intro\nSponsor: OldCo", tags=("a", "b"))
+    run(e, (e.on_upload, vid("Same title")))
+    yt.info = LiveInfo("none", description="Intro\nSponsor: NewCo", tags=("b", "c"))
+    run(e, (e.on_edit, vid("Same title", 60)))
+    text = edit_text(s)
+    assert "-Sponsor: OldCo" in text and "+Sponsor: NewCo" in text
+    assert "Before (removed): ~~a~~" in text and "After (added): **c**" in text
+    assert "Title changed" not in text                       # title did not change
+
+
+def test_edit_with_title_description_and_tags_together(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg, NO_COOLDOWN)
+    yt.info = LiveInfo("none", description="old", tags=("a",))
+    run(e, (e.on_upload, vid("Old")))
+    yt.info = LiveInfo("none", description="new", tags=("a", "z"))
+    run(e, (e.on_edit, vid("New", 60)))
+    text = edit_text(s)
+    assert text.count("changed:") == 3 and "~~Old~~" in text and "**New**" in text
+
+
+def test_snapshot_survives_a_restart(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg, NO_COOLDOWN)
+    yt.info = LiveInfo("none", description="before", tags=("t",))
+    run(e, (e.on_upload, vid("V")))
+    # new engine, same state file
+    cfg = load_config(write_cfg(BASE + NO_COOLDOWN))
+    s2, yt2 = FakeSender(), FakeYT()
+    e2 = Engine(cfg, s2, yt2, StateStore(tmp_path / "state.json"))
+    yt2.info = LiveInfo("none", description="after", tags=("t",))
+    run(e2, (e2.on_edit, vid("V", 60)))
+    assert "-before" in edit_text(s2) and "+after" in edit_text(s2)
+
+
+def test_unknown_before_state_falls_back_instead_of_inventing_a_diff(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg, NO_COOLDOWN)       # uploaded when details were unreadable
+    run(e, (e.on_upload, vid("V")))
+    yt.info = LiveInfo("none", description="now readable", tags=())
+    run(e, (e.on_edit, vid("V", 60)))
+    assert edit_text(s) == "The video details were updated."
+    yt.info = LiveInfo("none", description="changed again", tags=())
+    run(e, (e.on_edit, vid("V", 120)))                      # the snapshot exists now
+    assert "-now readable" in edit_text(s) and "+changed again" in edit_text(s)
+
+
+def test_details_unreadable_on_edit_keeps_old_snapshot(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg, NO_COOLDOWN)
+    yt.info = LiveInfo("none", description="kept", tags=())
+    run(e, (e.on_upload, vid("V")))
+    yt.info = LiveInfo("none")                              # lookup worked, no details
+    run(e, (e.on_edit, vid("V", 60)))
+    yt.info = LiveInfo("none", description="changed", tags=())
+    run(e, (e.on_edit, vid("V", 120)))
+    assert "-kept" in edit_text(s)
+
+
+def test_show_diff_false_restores_the_plain_message(tmp_path, write_cfg):
+    extra = "\ndefaults:\n  events:\n    edit: {cooldown_seconds: 0, show_diff: false}\n"
+    e, s, yt = make(tmp_path, write_cfg, extra)
+    yt.info = LiveInfo("none", description="a", tags=())
+    run(e, (e.on_upload, vid("V")))
+    yt.info = LiveInfo("none", description="b", tags=())
+    run(e, (e.on_edit, vid("V", 60)))
+    assert edit_text(s) == "The video details were updated."
+    run(e, (e.on_edit, vid("V2", 120)))
+    assert "~~V~~" in edit_text(s)                          # title before/after as before
+
+
+def test_suppressed_edits_still_update_the_snapshot(tmp_path, write_cfg):
+    e, s, yt = make(tmp_path, write_cfg)                    # default 300s cooldown
+    yt.info = LiveInfo("none", description="v1", tags=())
+    run(e, (e.on_upload, vid("V")))
+    yt.info = LiveInfo("none", description="v2", tags=())
+    run(e, (e.on_edit, vid("V", 60)))                       # inside cooldown: silent
+    assert len(s.sent) == 1
+    assert e.state.get("VID00000001").description == "v2"

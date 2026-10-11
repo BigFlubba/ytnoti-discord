@@ -7,6 +7,7 @@ import asyncio
 import logging
 import logging.handlers
 import os
+import re
 import signal
 import sys
 import time
@@ -20,7 +21,7 @@ from ytnoti import AsyncYouTubeNotifier
 from ytnoti.models.history import FileVideoHistory
 
 from . import __version__
-from .config import EVENT_NAMES, Config, ConfigError, load_config
+from .diffing import describe_changes
 from .discord_client import DiscordSender
 from .engine import Engine
 from .render import build_context, render_payload

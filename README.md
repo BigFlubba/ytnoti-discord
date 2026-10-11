@@ -10,7 +10,7 @@ YouTube's push notifications (WebSub/PubSubHubbub): **no polling, no API key, no
 | `upload` | A new video appears |
 | `live` | A live stream starts (sent once per stream) |
 | `upcoming` | A live stream is scheduled (**off by default**) |
-| `edit` | A video's title/details change (title changes show *old → new*) |
+| `edit` | A video's title, description or tags change (shows a *before → after*) |
 | `delete` | A video is removed |
 
 ## Quick start
@@ -77,10 +77,35 @@ healthy once that works.
   only, which lets Discord show its inline YouTube player). Templates support
   `{title} {old_title} {change} {url} {channel_name} {published_ts} {scheduled_ts} …`.
   Typos in variable names fail at startup, not at 3 a.m.
+* **Edit before/after:** edit messages show what changed: the title (old → new), the
+  description (only the changed lines, as a `-` before / `+` after diff) and tags
+  (removed / added). Set `show_diff: false` on `edit` for the old one-line message.
+  See "How edits are compared" below.
 * **Edit noise control:** `cooldown_seconds` (default 300) and `only_if_title_changed`.
 * **Mentions:** `<@&roleid>` works in `content`. `@everyone`/`@here` are blocked unless
   you add `everyone` to `discord.allowed_mentions.parse`. Video titles are
   de-fanged in `content` so a title can never ping anyone.
+
+## How edits are compared
+
+YouTube's push feed only contains the title, so the description and tags come from the
+same lookup used for live detection (the Data API if `youtube_api_key` is set, else the
+watch page), at no extra quota or requests. The service saves a snapshot of each video's
+title, description and tags in `/data/state.json` every time it sees the video, and the
+next edit is compared against it.
+
+* A video first seen **before this feature existed**, or whose details couldn't be read,
+  has no "before" yet: that edit falls back to the plain message (plus the title change)
+  and the snapshot is recorded, so the *following* edit gets a full diff. A diff is never
+  invented from unknown data.
+* The snapshot updates on every push, even when the notification is skipped (cooldown,
+  `only_if_title_changed`), so a diff shows what changed since the last push.
+* Thumbnails, privacy and other settings aren't in the feed or compared. Such edits
+  show "The video details were updated."
+* Long descriptions show only the changed lines and are truncated. State grows with
+  the stored descriptions (up to 2000 videos are kept).
+* YouTube's API can briefly serve a cached copy right after an edit; if so the change
+  appears with the next push.
 
 ## How "live" detection works (and its limits)
 
