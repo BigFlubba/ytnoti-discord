@@ -144,6 +144,11 @@ class ServerCfg(_Section):
     # any non-200 as "invalid". Set false if that check misfires on your network.
     verify_channels: bool = True
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Send sample notifications at every start, with no CLI flag needed:
+    # false (default) | true (all five events) | a list such as [upload, live].
+    # Handy for checking routing after a deploy; turn it off afterwards, since
+    # every restart posts the samples again.
+    test_on_start: bool | list[str] = False
     # Optional rotating log file. A relative path is resolved against data_dir.
     log_file: str | None = None
     log_max_bytes: int = Field(default=5_000_000, ge=10_000)
@@ -376,6 +381,7 @@ def load_config(path: str | os.PathLike[str]) -> Config:
 
         events: dict[str, EventCfg] = {}
         targets: dict[str, list[tuple[str, str]]] = {}
+        test_targets: dict[str, list[tuple[str, str]]] = {}
         for name in EVENT_NAMES:
             merged = deep_merge(BUILTIN_EVENTS[name], (root.defaults.events.get(name) or {}))
             merged = deep_merge(merged, (ch.events.get(name) or {}))
@@ -407,10 +413,19 @@ def load_config(path: str | os.PathLike[str]) -> Config:
                 targets[name] = _resolve_webhooks(
                     hooks, root.webhooks, f"{where}.events.{name}"
                 )
+                test_targets[name] = targets[name]
             else:
                 targets[name] = []
+                # Lenient: a disabled event's routing was never validated before,
+                # so a problem here must not break configs that used to load.
+                try:
+                    test_targets[name] = _resolve_webhooks(
+                        hooks or [], root.webhooks, f"{where}.events.{name}")
+                except ConfigError:
+                    test_targets[name] = []
 
-        channels[ch.id] = Channel(id=ch.id, name=ch.name, events=events, targets=targets)
+        channels[ch.id] = Channel(id=ch.id, name=ch.name, events=events,
+                                  targets=targets, test_targets=test_targets)
 
     return Config(
         server=root.server,

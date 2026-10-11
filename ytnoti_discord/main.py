@@ -123,6 +123,12 @@ def _http_client() -> httpx.AsyncClient:
 def print_summary(cfg: Config) -> None:
     print(f"Callback URL : {cfg.server.callback_url}")
     print(f"Listening on : {cfg.server.host}:{cfg.server.port}")
+    if cfg.server.test_on_start:
+        which = "all events" if cfg.server.test_on_start is True else \
+            ", ".join(cfg.server.test_on_start)
+        print(f"Test on start: {which} (first channel; turn off after verifying)")
+    if cfg.server.log_file:
+        print(f"Log file     : {resolve_log_file(cfg)}")
     print(f"Live detect  : {'YouTube Data API' if cfg.youtube_api_key else 'watch-page scrape (no API key)'}")
     print(f"Channels     : {len(cfg.channels)}")
     for ch in cfg.channels.values():
@@ -133,40 +139,101 @@ def print_summary(cfg: Config) -> None:
         print(f"      sends to: {', '.join(hooks) or 'none'}")
 
 
-async def run_test(cfg: Config, events: list[str], channel_id: str | None) -> int:
-    if channel_id:
-        if channel_id not in cfg.channels:
-            print(f"error: channel {channel_id} is not in the config", file=sys.stderr)
-            return 2
-        channel = cfg.channels[channel_id]
-    else:
-        channel = next(iter(cfg.channels.values()))
-    events = events or [e for e in EVENT_NAMES if channel.events[e].enabled]
+SAMPLE_VIDEO_ID = "jNQXAC9IVRw"  # the first video ever uploaded to YouTube
 
-    sample = "jNQXAC9IVRw"  # the first video ever uploaded to YouTube
-    failures = 0
+
+def build_test_context(channel: Channel, event: str,
+                       now: datetime | None = None) -> dict[str, str]:
+    """Sample data for one event type, shaped like what the engine produces."""
+    now = now or datetime.now(timezone.utc)
+    kwargs: dict[str, object] = {}
+    title = f"[TEST] Sample {event} notification"
+    if event == "edit":
+        kwargs.update(
+            old_title="[TEST] Old title",
+            change=describe_changes(
+                old_title="[TEST] Old title", new_title="[TEST] New title",
+                old_description="Welcome!\nOld sponsor line\nFollow us for more",
+                new_description="Welcome!\nNew sponsor line\nFollow us for more\nChapters below",
+                old_tags=["test", "old-tag"], new_tags=["test", "new-tag"]))
+    elif event == "upcoming":
+        kwargs["scheduled_ts"] = int((now + timedelta(hours=1)).timestamp())
+    elif event == "delete":
+        kwargs["deleted_at"] = now
+    return build_context(
+        event=event, video_id=SAMPLE_VIDEO_ID, title=title,
+        url=f"https://www.youtube.com/watch?v={SAMPLE_VIDEO_ID}",
+        channel_id=channel.id, channel_name=channel.name or "Test Channel",
+        channel_url=f"https://www.youtube.com/channel/{channel.id}",
+        thumbnail=f"https://i.ytimg.com/vi/{SAMPLE_VIDEO_ID}/hqdefault.jpg",
+        published=now, updated=now, **kwargs,  # type: ignore[arg-type]
+    )
+
+
+def mark_as_test(payload: dict[str, object], event: str) -> dict[str, object]:
+    """Label the message as a test (even for embed-less events) and disable pings."""
+    tag = f"\U0001F9EA **[TEST: {event}]**"
+    content = str(payload.get("content") or "")
+    payload["content"] = f"{tag} {content}".strip()[:2000]
+    payload["allowed_mentions"] = {"parse": []}  # a test must never ping anyone
+    return payload
+
+
+async def send_test_notifications(
+    cfg: Config, events: list[str], channel_id: str | None,
+    client: httpx.AsyncClient,
+) -> list[tuple[str, str]]:
+    """Send a sample of each event; returns [(event, 'sent'|'failed'|'skipped')]."""
+    channel = cfg.channels[channel_id] if channel_id else next(iter(cfg.channels.values()))
+    sender = DiscordSender(client, cfg.discord.max_retries)
+    results: list[tuple[str, str]] = []
+    for event in events or list(EVENT_NAMES):
+        targets = channel.test_targets.get(event) or []
+        if not targets:
+            results.append((event, "skipped"))
+            continue
+        ctx = build_test_context(channel, event)
+        payload = mark_as_test(render_payload(channel.events[event], ctx, cfg.discord),
+                               event)
+        ok = all([await sender.send(label, url, payload) for label, url in targets])
+        results.append((event, "sent" if ok else "failed"))
+    return results
+
+
+async def run_test(cfg: Config, events: list[str], channel_id: str | None) -> int:
+    """CLI `--test`: sample of each requested event (default: ALL five, even if disabled)."""
+    if channel_id and channel_id not in cfg.channels:
+        print(f"error: channel {channel_id} is not in the config", file=sys.stderr)
+        return 2
+    channel = cfg.channels[channel_id] if channel_id else next(iter(cfg.channels.values()))
+
     async with _http_client() as client:
-        sender = DiscordSender(client, cfg.discord.max_retries)
-        for event in events:
-            ev = channel.events[event]
-            if not channel.targets[event]:
-                print(f"- {event}: skipped (disabled)")
-                continue
-            ctx = build_context(
-                event=event, video_id=sample, title=f"[TEST] Sample {event} notification",
-                url=f"https://www.youtube.com/watch?v={sample}",
-                channel_id=channel.id, channel_name=channel.name or "Test Channel",
-                channel_url=f"https://www.youtube.com/channel/{channel.id}",
-                old_title="[TEST] Old title",
-                change="Title changed:\n~~[TEST] Old title~~\n\u2192 **[TEST] New title**",
-                thumbnail=f"https://i.ytimg.com/vi/{sample}/hqdefault.jpg",
-            )
-            payload = render_payload(ev, ctx, cfg.discord)
-            ok = all([await sender.send(label, url, payload)
-                      for label, url in channel.targets[event]])
-            print(f"- {event}: {'sent' if ok else 'FAILED'}")
-            failures += 0 if ok else 1
+        results = await send_test_notifications(cfg, events, channel_id, client)
+    failures = 0
+    for event, status in results:
+        if status == "skipped":
+            print(f"- {event}: skipped (no webhook configured)")
+            continue
+        note = "" if channel.events[event].enabled else \
+            " (event is disabled in config; sent as a test only)"
+        print(f"- {event}: {'sent' if status == 'sent' else 'FAILED'}{note}")
+        failures += status == "failed"
     return 1 if failures else 0
+
+
+async def _startup_test(cfg: Config, client: httpx.AsyncClient) -> None:
+    """`server.test_on_start`: runs in the background so it never delays startup."""
+    events = [] if cfg.server.test_on_start is True else list(cfg.server.test_on_start)
+    channel = next(iter(cfg.channels.values()))
+    log.info("test_on_start: sending sample notifications (%s) for channel %s",
+             ", ".join(events) or "all events", channel.id)
+    try:
+        results = await send_test_notifications(cfg, events, None, client)
+    except Exception:  # a failed test must never take the service down
+        log.exception("test_on_start failed")
+        return
+    for event, status in results:
+        (log.info if status == "sent" else log.warning)("test_on_start: %s %s", event, status)
 
 
 # --------------------------------------------------------------------------- #
@@ -226,6 +293,8 @@ async def serve(cfg: Config) -> None:
         signal.signal(signal.SIGTERM, lambda *_: None)
 
         watchdog = asyncio.create_task(_startup_watchdog(notifier, cfg))
+        test_task = (asyncio.create_task(_startup_test(cfg, client))
+                     if cfg.server.test_on_start else None)
         log.info("starting v%s: %d channel(s), callback %s", __version__, subscribed,
                  cfg.server.callback_url)
         try:
@@ -282,10 +351,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
 
-    setup_logging(cfg.server.log_level)
+    # An explicit --test flag still works even if the config says check_only.
+    check = args.check or (cfg.server.check_only and args.test is None)
+    serving = not check and args.test is None
+    # Only the long-running service writes the log file; --check/--test (often run
+    # via `docker compose run`) stay on the console and don't fight over rotation.
+    setup_logging(
+        cfg.server.log_level,
+        resolve_log_file(cfg) if serving else None,
+        max_bytes=cfg.server.log_max_bytes,
+        backup_count=cfg.server.log_backup_count,
+    )
 
-    if args.check:
-        print_summary(cfg)
+    if check:
+        print_summary(cfg, config_path)
+        if not args.check:
+            print("\n(server.check_only is true in the config: not starting the service)")
         print("\nConfig OK")
         return 0
     if args.test is not None:

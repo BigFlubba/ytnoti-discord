@@ -19,7 +19,7 @@ YouTube's push notifications (WebSub/PubSubHubbub): **no polling, no API key, no
 cp config.example.yaml config.yaml     # set callback_url and your channel IDs
 cp .env.example .env                   # put your Discord webhook URL in here
 docker compose run --rm ytnoti-discord --check   # validate config
-docker compose run --rm ytnoti-discord --test    # send sample messages to Discord
+docker compose run --rm ytnoti-discord --test    # send a sample of EVERY event to Discord
 docker compose up -d --build
 docker compose logs -f
 ```
