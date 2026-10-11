@@ -144,6 +144,32 @@ class ServerCfg(_Section):
     # any non-200 as "invalid". Set false if that check misfires on your network.
     verify_channels: bool = True
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Optional rotating log file. A relative path is resolved against data_dir.
+    log_file: str | None = None
+    log_max_bytes: int = Field(default=5_000_000, ge=10_000)
+    log_backup_count: int = Field(default=3, ge=0, le=100)
+
+    @field_validator("test_on_start", mode="before")
+    @classmethod
+    def _test_on_start(cls, v: Any) -> Any:
+        if isinstance(v, str):  # e.g. from ${TEST_ON_START:-false} or "upload,live"
+            text = v.strip().lower()
+            if text in ("", "false", "0", "no", "off"):
+                return False
+            if text in ("true", "1", "yes", "on", "all"):
+                return True
+            v = [part.strip() for part in text.split(",") if part.strip()]
+        if isinstance(v, list):
+            bad = [e for e in v if e not in EVENT_NAMES]
+            if bad:
+                raise ValueError(f"unknown event(s) {bad}; valid: {', '.join(EVENT_NAMES)}")
+            return list(dict.fromkeys(v)) or False   # de-duplicate; [] means off
+        return v
+
+    @field_validator("log_file", mode="before")
+    @classmethod
+    def _empty_log_file(cls, v: Any) -> Any:
+        return v or None
 
     @field_validator("callback_url")
     @classmethod

@@ -5,10 +5,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import logging.handlers
 import os
 import signal
 import sys
 import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, Response
@@ -43,17 +47,66 @@ class _Throttle(logging.Filter):
         return False
 
 
-def setup_logging(level: str) -> None:
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+_SECRET_PATTERNS = (
+    (re.compile(r"(discord(?:app)?\.com/api(?:/v\d+)?/webhooks/)[^\s'\"]+", re.I),
+     r"\1<redacted>"),
+    (re.compile(r"([?&](?:key|token)=)[^&\s'\"]+", re.I), r"\1<redacted>"),
+)
+
+
+class _Redact(logging.Filter):
+    """Last line of defence: never let a webhook URL or API key reach a log."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = message
+        for pattern, repl in _SECRET_PATTERNS:
+            redacted = pattern.sub(repl, redacted)
+        if redacted != message:
+            record.msg, record.args = redacted, None
+        return True
+
+
+def setup_logging(level: str, log_file: Path | None = None, *,
+                  max_bytes: int = 5_000_000, backup_count: int = 3) -> None:
+    fmt = logging.Formatter("%(asctime)s %(levelname)-7s %(name)s: %(message)s",
+                            "%Y-%m-%d %H:%M:%S")
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if log_file is not None:
+        try:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            handlers.append(logging.handlers.RotatingFileHandler(
+                log_file, maxBytes=max_bytes, backupCount=backup_count,
+                encoding="utf-8"))
+        except OSError as exc:  # e.g. read-only or unwritable volume
+            print(f"warning: cannot write log file {log_file} ({exc}); "
+                  "logging to the console only", file=sys.stderr)
+    for handler in handlers:
+        handler.setFormatter(fmt)
+        handler.addFilter(_Redact())
+
+    root = logging.getLogger()
+    for old in root.handlers[:]:  # replace, so repeated calls don't duplicate output
+        root.removeHandler(old)
+        old.close()
+    root.setLevel(level)
+    for handler in handlers:
+        root.addHandler(handler)
+
     # httpx logs every request URL at INFO -- that would print Discord webhook
     # tokens and the YouTube API key. Keep these quiet.
     for noisy in ("httpx", "httpcore"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
-    logging.getLogger("AsyncYouTubeNotifier").addFilter(_Throttle())
+    throttled = logging.getLogger("AsyncYouTubeNotifier")
+    if not any(isinstance(f, _Throttle) for f in throttled.filters):
+        throttled.addFilter(_Throttle())
+
+
+def resolve_log_file(cfg: Config) -> Path | None:
+    if not cfg.server.log_file:
+        return None
+    path = Path(cfg.server.log_file)
+    return path if path.is_absolute() else cfg.data_dir / path
 
 
 def _http_client() -> httpx.AsyncClient:
@@ -179,6 +232,9 @@ async def serve(cfg: Config) -> None:
             await notifier.run(
                 host=cfg.server.host, port=cfg.server.port,
                 log_level=logging.DEBUG if cfg.server.log_level == "DEBUG" else logging.WARNING,
+                # Let uvicorn's logs flow through our handlers (so they reach the
+                # log file too) and don't advertise the server software.
+                log_config=None, server_header=False,
             )
         finally:
             watchdog.cancel()

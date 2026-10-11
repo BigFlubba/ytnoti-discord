@@ -12,6 +12,11 @@ server:
   # secret: ${YTNOTI_SECRET:-}   # optional fixed HMAC secret (random per start if unset)
   # log_level: INFO              # DEBUG | INFO | WARNING | ERROR
   # verify_channels: true        # set false if channel-ID verification misfires
+  # Optional rotating log file (the console log stays on). A relative path is
+  # relative to data_dir, e.g. /data/logs/ytnoti-discord.log in Docker.
+  # log_file: ${YTNOTI_LOG_FILE:-}   # empty = no file
+  # log_max_bytes: 5000000           # rotate at this size (default 5 MB)
+  # log_backup_count: 3              # rotated files to keep
 
 # Optional. With a key, live/upcoming detection uses the official API (1 quota
 # unit per push). Without it, the public watch page is parsed (less robust).

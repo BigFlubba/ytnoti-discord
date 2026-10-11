@@ -99,6 +99,13 @@ as an edit.
 * **No state across restarts:** make sure `/data` is a volume. With a bind mount,
   `chown 10001:10001` the directory (the container runs unprivileged).
 * **Silence the logs?** `server.log_level: WARNING`. Webhook URLs are never logged.
+* **Keep logs in a file?** Set `server.log_file` (relative paths live under `data_dir`,
+  so `logs/ytnoti-discord.log` ends up in `/data/logs/` in Docker). The file rotates at
+  `log_max_bytes` (5 MB) keeping `log_backup_count` (3) old files, and includes the
+  web server's own messages. Webhook URLs and API keys are redacted from it. Only the
+  running service writes it (not `--check`/`--test`). If the file can't be opened the
+  service warns and keeps logging to the console. With a bind-mounted `/data`, the
+  directory must be writable by UID 10001.
 
 ## Notes
 
