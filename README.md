@@ -40,6 +40,29 @@ the config, print the summary and exit without starting the service (the contain
 exits with code 0, or 2 on a config error). Set it back to `false` to run normally. An
 explicit `--test` flag still works while it is set.
 
+## Test notifications
+
+`--test` posts a clearly labelled sample message (`🧪 [TEST: <event>]`) for **every**
+event type (`upload`, `live`, `upcoming`, `edit`, `delete`) so you can check routing and
+formatting without waiting for YouTube. It uses your real templates and webhooks, and
+includes events you have disabled (e.g. `upcoming`), noting that in the output.
+
+```bash
+docker compose run --rm ytnoti-discord --test                  # all five events
+docker compose run --rm ytnoti-discord --test live upcoming    # just these
+docker compose run --rm ytnoti-discord --test --channel UCxxxxxxxxxxxxxxxxxxxxxx
+docker compose exec ytnoti-discord python -m ytnoti_discord --test   # in the running container
+```
+
+To do this from the config instead of a container flag, set `server.test_on_start`
+(`true` for all events, or a list like `[upload, live]`). The samples are then sent in the
+background every time the service starts (for the first channel), and the results appear
+in the log. Handy for verifying a deploy; **turn it off afterwards**, since every restart
+posts them again. It also accepts an env value, e.g. `test_on_start: ${YTNOTI_TEST_ON_START:-false}`.
+
+Test messages never ping anyone (`allowed_mentions` is emptied), even if a template
+contains a role mention. The exit code is non-zero if any delivery fails.
+
 ## The public callback URL (the one non-obvious requirement)
 
 YouTube's hub *calls you*, so `server.callback_url` must be reachable from the internet.

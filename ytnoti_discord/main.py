@@ -22,6 +22,7 @@ from ytnoti.models.history import FileVideoHistory
 
 from . import __version__
 from .callback_guard import CallbackGuard, topic_for
+from .config import EVENT_NAMES, Channel, Config, ConfigError, load_config
 from .diffing import describe_changes
 from .discord_client import DiscordSender
 from .engine import Engine

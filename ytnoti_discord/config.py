@@ -240,7 +240,11 @@ class Channel:
     name: str | None
     events: dict[str, EventCfg]
     # event name -> [(label, url)]; labels are safe to log, URLs are secrets.
+    # Empty for disabled events.
     targets: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
+    # Same routing, but also filled for disabled events, so `--test` can send a
+    # sample of every event type. Never used for real notifications.
+    test_targets: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
 
 
 @dataclass
