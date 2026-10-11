@@ -128,6 +128,8 @@ class EventCfg(_Strict):
     # edit-only options
     cooldown_seconds: int = Field(default=0, ge=0)
     only_if_title_changed: bool = False
+    # edit-only: show a before/after of the title, description and tags in {change}
+    show_diff: bool = True
 
     @field_validator("embed", mode="before")
     @classmethod
