@@ -49,13 +49,13 @@ def test_commented_second_channel_example_is_valid_when_uncommented(tmp_path, mo
     monkeypatch.setenv("DISCORD_ALERTS_WEBHOOK_URL", HOOK)
     lines, out, in_block = EXAMPLE.read_text().splitlines(), [], False
     for line in lines:
-        if line.startswith("  # A second channel"):
+        if line.startswith("  # Example: send live alerts"):
             in_block = True
-        elif line.startswith("# ----"):
+        elif line.startswith("# Event types:"):
             in_block = False
         if line.startswith("  # webhooks: ") or line.startswith("  # alerts:"):
             line = line.replace("# ", "", 1)
-        elif in_block and re.match(r"^  # ", line) and not line.startswith("  # A second"):
+        elif in_block and re.match(r"^  # ", line) and not line.startswith("  # Example:"):
             line = line.replace("# ", "", 1)
         out.append(line)
     out = [l.replace("  # alerts:", "  alerts:") for l in out]
