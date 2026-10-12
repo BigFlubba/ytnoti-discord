@@ -159,4 +159,4 @@ AI was used in the making of this project. Commits are reviewed by a human befor
 
 ## License
 
-The `ytnoti` library is MIT-licensed by SeoulSKY. See the repository's license files for the terms applicable to this project.
+The `ytnoti` library is MIT-licensed by SeoulSKY.
