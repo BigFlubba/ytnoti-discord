@@ -73,3 +73,35 @@ def test_client_prefers_api_then_falls_back_to_page():
 
     assert asyncio.run(go()).status == "live"
     assert calls == ["www.googleapis.com", "www.youtube.com"]
+
+
+# -- description / tags for edit diffs ----------------------------------------------
+
+def test_page_exposes_description_and_tags():
+    p = {"videoDetails": {"videoId": "a", "shortDescription": "Hello\nworld",
+                          "keywords": ["x", "y"]}}
+    info = parse_player_response(page(p))
+    assert info.description == "Hello\nworld" and info.tags == ("x", "y")
+
+
+def test_page_without_description_key_means_empty_on_real_pages():
+    info = parse_player_response(page({"videoDetails": {"videoId": "a"}}))
+    assert info.description == "" and info.tags == ()
+
+
+def test_page_details_are_unknown_when_not_a_real_video_page():
+    assert parse_player_response(page({"videoDetails": {"isLive": True}})).description is None
+
+
+def test_live_and_upcoming_pages_also_carry_details():
+    live = parse_player_response(page({"videoDetails": {
+        "videoId": "a", "isLive": True, "shortDescription": "d"}}))
+    assert live.status == "live" and live.description == "d"
+
+
+def test_api_item_exposes_description_and_tags():
+    info = parse_api_item({"snippet": {"liveBroadcastContent": "none",
+                                       "description": "D", "tags": ["a", "b"]}})
+    assert info.description == "D" and info.tags == ("a", "b")
+    empty = parse_api_item({"snippet": {"liveBroadcastContent": "none", "description": ""}})
+    assert empty.description == "" and empty.tags == ()

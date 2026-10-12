@@ -128,6 +128,8 @@ class EventCfg(_Strict):
     # edit-only options
     cooldown_seconds: int = Field(default=0, ge=0)
     only_if_title_changed: bool = False
+    # edit-only: show a before/after of the title, description and tags in {change}
+    show_diff: bool = True
 
     @field_validator("embed", mode="before")
     @classmethod
@@ -144,6 +146,41 @@ class ServerCfg(_Section):
     # any non-200 as "invalid". Set false if that check misfires on your network.
     verify_channels: bool = True
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Validate the config, print the summary and exit instead of running, exactly
+    # like `--check` -- but set from the file, so no container flag is needed.
+    # While true the service will not start: set it back to false to run normally.
+    check_only: bool = False
+    # Send sample notifications at every start, with no CLI flag needed:
+    # false (default) | true (all five events) | a list such as [upload, live].
+    # Handy for checking routing after a deploy; turn it off afterwards, since
+    # every restart posts the samples again.
+    test_on_start: bool | list[str] = False
+    # Optional rotating log file. A relative path is resolved against data_dir.
+    log_file: str | None = None
+    log_max_bytes: int = Field(default=5_000_000, ge=10_000)
+    log_backup_count: int = Field(default=3, ge=0, le=100)
+
+    @field_validator("test_on_start", mode="before")
+    @classmethod
+    def _test_on_start(cls, v: Any) -> Any:
+        if isinstance(v, str):  # e.g. from ${TEST_ON_START:-false} or "upload,live"
+            text = v.strip().lower()
+            if text in ("", "false", "0", "no", "off"):
+                return False
+            if text in ("true", "1", "yes", "on", "all"):
+                return True
+            v = [part.strip() for part in text.split(",") if part.strip()]
+        if isinstance(v, list):
+            bad = [e for e in v if e not in EVENT_NAMES]
+            if bad:
+                raise ValueError(f"unknown event(s) {bad}; valid: {', '.join(EVENT_NAMES)}")
+            return list(dict.fromkeys(v)) or False   # de-duplicate; [] means off
+        return v
+
+    @field_validator("log_file", mode="before")
+    @classmethod
+    def _empty_log_file(cls, v: Any) -> Any:
+        return v or None
 
     @field_validator("callback_url")
     @classmethod
@@ -205,7 +242,11 @@ class Channel:
     name: str | None
     events: dict[str, EventCfg]
     # event name -> [(label, url)]; labels are safe to log, URLs are secrets.
+    # Empty for disabled events.
     targets: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
+    # Same routing, but also filled for disabled events, so `--test` can send a
+    # sample of every event type. Never used for real notifications.
+    test_targets: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
 
 
 @dataclass
@@ -350,6 +391,7 @@ def load_config(path: str | os.PathLike[str]) -> Config:
 
         events: dict[str, EventCfg] = {}
         targets: dict[str, list[tuple[str, str]]] = {}
+        test_targets: dict[str, list[tuple[str, str]]] = {}
         for name in EVENT_NAMES:
             merged = deep_merge(BUILTIN_EVENTS[name], (root.defaults.events.get(name) or {}))
             merged = deep_merge(merged, (ch.events.get(name) or {}))
@@ -381,10 +423,19 @@ def load_config(path: str | os.PathLike[str]) -> Config:
                 targets[name] = _resolve_webhooks(
                     hooks, root.webhooks, f"{where}.events.{name}"
                 )
+                test_targets[name] = targets[name]
             else:
                 targets[name] = []
+                # Lenient: a disabled event's routing was never validated before,
+                # so a problem here must not break configs that used to load.
+                try:
+                    test_targets[name] = _resolve_webhooks(
+                        hooks or [], root.webhooks, f"{where}.events.{name}")
+                except ConfigError:
+                    test_targets[name] = []
 
-        channels[ch.id] = Channel(id=ch.id, name=ch.name, events=events, targets=targets)
+        channels[ch.id] = Channel(id=ch.id, name=ch.name, events=events,
+                                  targets=targets, test_targets=test_targets)
 
     return Config(
         server=root.server,

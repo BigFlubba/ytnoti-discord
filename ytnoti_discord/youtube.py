@@ -31,6 +31,13 @@ _MARKER = "ytInitialPlayerResponse"
 class LiveInfo:
     status: Status
     scheduled_ts: int | None = None
+    # Current video details, from the same lookup. None = could not be read.
+    description: str | None = None
+    tags: tuple[str, ...] | None = None
+
+
+def _tags(value: Any) -> tuple[str, ...]:
+    return tuple(t for t in value if isinstance(t, str)) if isinstance(value, list) else ()
 
 
 def _iso_to_ts(value: Any) -> int | None:
@@ -63,21 +70,38 @@ def parse_player_response(html: str) -> LiveInfo | None:
     broadcast = micro.get("liveBroadcastDetails") or {}
     playability = (data.get("playabilityStatus") or {}).get("status")
 
+    # Real pages always carry videoId; then a missing shortDescription/keywords
+    # means "empty", not "unknown".
+    extra: dict[str, Any] = {}
+    if details.get("videoId"):
+        desc = details.get("shortDescription")
+        extra = {"description": desc if isinstance(desc, str) else "",
+                 "tags": _tags(details.get("keywords"))}
+    elif isinstance(details.get("shortDescription"), str):
+        extra = {"description": details["shortDescription"],
+                 "tags": _tags(details.get("keywords"))}
+
     if details.get("isLive") or broadcast.get("isLiveNow"):
-        return LiveInfo("live")
+        return LiveInfo("live", **extra)
     if details.get("isUpcoming") or playability == "LIVE_STREAM_OFFLINE":
-        return LiveInfo("upcoming", _iso_to_ts(broadcast.get("startTimestamp")))
+        return LiveInfo("upcoming", _iso_to_ts(broadcast.get("startTimestamp")), **extra)
     if details or micro:
-        return LiveInfo("none")
+        return LiveInfo("none", **extra)
     return None
 
 
 def parse_api_item(item: dict[str, Any]) -> LiveInfo | None:
-    state = (item.get("snippet") or {}).get("liveBroadcastContent")
+    snippet = item.get("snippet") or {}
+    state = snippet.get("liveBroadcastContent")
     if state not in ("live", "upcoming", "none"):
         return None
     scheduled = (item.get("liveStreamingDetails") or {}).get("scheduledStartTime")
-    return LiveInfo(state, _iso_to_ts(scheduled) if state == "upcoming" else None)
+    desc = snippet.get("description")
+    return LiveInfo(
+        state, _iso_to_ts(scheduled) if state == "upcoming" else None,
+        description=desc if isinstance(desc, str) else None,
+        tags=_tags(snippet.get("tags")) if isinstance(desc, str) else None,
+    )
 
 
 class YouTubeClient:

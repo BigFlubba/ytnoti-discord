@@ -13,6 +13,7 @@ from ytnoti import DeletedVideo, Video
 
 from .config import Channel, Config
 from .discord_client import DiscordSender
+from .diffing import describe_changes
 from .render import build_context, render_payload
 from .state import StateStore, VideoRecord
 from .youtube import LiveInfo
@@ -93,8 +94,8 @@ class Engine:
                                        title_changed)
 
             if event:
-                change = (f"Title changed:\n~~{old_title}~~\n\u2192 **{video.title}**"
-                          if title_changed else "The video details were updated.")
+                change = self._change_text(channel, event, rec, video.title,
+                                           title_changed, info)
                 ctx = build_context(
                     event=event, video_id=video.id, title=video.title, url=video.url,
                     channel_id=video.channel.id,
@@ -109,10 +110,28 @@ class Engine:
 
             rec.title = video.title
             rec.channel_id = video.channel.id
+            if info and info.description is not None:  # next edit's "before"
+                rec.description, rec.tags = info.description, list(info.tags or ())
             if not duplicate:
                 rec.last_updated = video.timestamp.updated.isoformat()
             self.state.put(video.id, rec)
             self.state.save()
+
+    @staticmethod
+    def _change_text(channel: Channel, event: str, rec: VideoRecord, new_title: str,
+                     title_changed: bool, info: LiveInfo | None) -> str:
+        """The {change} text: a real before/after for edits, a plain line otherwise."""
+        generic = "The video details were updated."
+        old_title = rec.title
+        legacy = (f"Title changed:\n~~{old_title}~~\n\u2192 **{new_title}**"
+                  if title_changed else generic)
+        if event != "edit" or not channel.events["edit"].show_diff:
+            return legacy
+        return describe_changes(
+            old_title=old_title, new_title=new_title,
+            old_description=rec.description, new_description=info.description if info else None,
+            old_tags=rec.tags, new_tags=list(info.tags) if info and info.tags is not None else None,
+        ) or generic
 
     def _choose_event(self, channel: Channel, rec: VideoRecord, lib_kind: str,
                       status: str | None, duplicate: bool,
