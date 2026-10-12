@@ -6,46 +6,47 @@
 # All edits require a restart of the service to take effect.
 
 server:
-  # Required: public HTTPS URL that YouTube can reach and that forwards to port 8000.
-  # YouTube's hub calls this URL, so it must be reachable from the internet.
-  # Example: https://yt.example.com/ytnoti "/" also works.
-  callback_url: https://yt.example.com/ytnoti
+# Required: Callback URL for the service to send notifications to.
+  callback_url: ${CALLBACK_URL:?Callback URL is required. Set CALLBACK_URL in .env or config.yaml.}
 
   # Optional fixed HMAC secret; otherwise a random secret is generated on startup.
-  # secret: ${YTNOTI_SECRET:-}
+  secret: ${YTNOTI_SECRET:-}
 
   # Log level: DEBUG, INFO, WARNING, or ERROR.
-  # log_level: INFO
+  log_level: ${LOG_LEVEL:-INFO}
 
   # Disable only if channel-ID verification incorrectly rejects a valid channel.
   # verify_channels: true
 
   # Validate configuration and exit without starting the server.
-  # check_only: false
+  check_only: ${CHECK_ONLY:-false}
 
   # Send test messages at startup: true, false, or a list such as [upload, live].
   # Every restart sends the samples again; disable after testing.
-  # test_on_start: ${YTNOTI_TEST_ON_START:-false}
+  test_on_start: ${YTNOTI_TEST_ON_START:-false}
 
-  # Optional rotating file log. Relative paths are under data_dir (/data in Docker).
+  # Optional: write rotating logs to a file in addition to console logs.
+  # Relative paths are under data_dir (/data in Docker).
   # Example: /data/logs/ytnoti-discord.log
-  # log_file: ${YTNOTI_LOG_FILE:-}
+  log_file: ${YTNOTI_LOG_FILE:-}
+
+  # Optional: maximum log file size in bytes and number of backups to keep.
   # log_max_bytes: 5000000
   # log_backup_count: 3
 
 # Optional: use the official YouTube Data API for more reliable live/upcoming detection.
 # Requires a YouTube Data API v3 key; costs 1 quota unit per push.
-# youtube_api_key: ${YOUTUBE_API_KEY:-}
+youtube_api_key: ${YOUTUBE_API_KEY:-}
 
 # Give each Discord webhook a short name. Reference these names below.
 webhooks:
-  main: ${DISCORD_WEBHOOK_URL}
-  # alerts: ${DISCORD_ALERTS_WEBHOOK_URL}
+  main: ${MAIN_DISCORD_WEBHOOK_URL:?Main webhook URL is required. Set MAIN_DISCORD_WEBHOOK_URL in .env or config.yaml.}
+  alerts: ${DISCORD_ALERTS_WEBHOOK_URL:-}
 
 discord:
   # Optional webhook display name and avatar.
-  # username: YouTube Notifications
-  # avatar_url: https://example.com/avatar.png
+  username: ${USERNAME:-YouTube Notifications}
+  avatar_url: ${AVATAR_URL:-}
 
   # @everyone and @here are blocked by default. To allow them, uncomment:
   # allowed_mentions:
@@ -55,13 +56,14 @@ discord:
 defaults:
   webhooks: [main]
   events:
+    live:
+      enabled: true
+    upload:
+      enabled: true
     edit:
-      cooldown_seconds: 300 # ignore edits within N seconds of the last notification
-      only_if_title_changed: false # true = ignore description-only edits
-      show_diff: true # show before/after of title, description, and tags in {change}
-    # Scheduled-stream notices are disabled unless enabled:
-    # upcoming:
-    #   enabled: true
+
+    delete:
+      enabled: true
 
 channels:
   # Use a YouTube channel ID (starts with UC), not an @handle.
