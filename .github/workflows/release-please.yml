@@ -57,6 +57,7 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          release-type: python
 
   publish-image:
     name: Publish release image to GHCR
