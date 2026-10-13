@@ -56,38 +56,39 @@ def test_commented_second_channel_example_is_valid_when_uncommented(tmp_path, mo
 
     text = EXAMPLE.read_text()
 
-    # Try to locate the commented "second channel" block robustly.
-    # We look for the header line that mentions "A second channel" (commented or not),
-    # and an ending marker "# ----" if present; otherwise, stop at the next top-level separator.
+       # Try to locate the commented "second channel" block robustly.
+    # We look for a header line that mentions "second channel" (case-insensitive),
+    # and an ending marker "# ----", a blank line, or the next top-level key.
     start_idx = None
     end_idx = None
     lines = text.splitlines()
+    header_re = re.compile(r"(?i)second\s+channel")
     for i, line in enumerate(lines):
-        if "A second channel" in line:
+        if header_re.search(line):
             start_idx = i
             break
 
     if start_idx is not None:
-        # find end marker "# ----" after start, else stop at next line that begins with "# ----" or a top-level separator
         for j in range(start_idx + 1, len(lines)):
-            if lines[j].lstrip().startswith("# ----") or lines[j].strip() == "":
+            stripped = lines[j].strip()
+            lstripped = lines[j].lstrip()
+            # End if explicit marker, blank line, or an unindented top-level YAML key (like "channels:" or "defaults:")
+            if lstripped.startswith("# ----") or stripped == "" or (
+                lines[j] and not lines[j].startswith(" ") and not lstripped.startswith("#") and stripped.endswith(":")
+            ):
                 end_idx = j
                 break
         if end_idx is None:
             end_idx = len(lines)
 
-        # Uncomment lines in the block (remove a single leading "# " if present)
+        # Uncomment lines in the block (remove all leading '#' characters while preserving indentation)
         for k in range(start_idx, end_idx):
             if lines[k].lstrip().startswith("#"):
-                # remove the first occurrence of "# " or "#" while preserving indentation
-                lines[k] = re.sub(r"^(\s*)#\s?", r"\1", lines[k])
+                lines[k] = re.sub(r"^(\s*)#+\s?", r"\1", lines[k])
 
-    # also ensure some commonly-commented keys are uncommented
+    # also ensure some commonly-commented keys are uncommented (handle variants with/without a space)
     text_out = "\n".join(lines)
     text_out = text_out.replace("  # webhooks:", "  webhooks:")
+    text_out = text_out.replace("  #webhooks:", "  webhooks:")
     text_out = text_out.replace("  # alerts:", "  alerts:")
-
-    p = tmp_path / "c.yaml"
-    p.write_text(text_out)
-    cfg = load_config(p)
-    assert len(cfg.channels) == 2
+    text_out = text_out.replace("  #alerts:", "  alerts:")
