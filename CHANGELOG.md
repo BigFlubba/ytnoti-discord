@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.3...v0.3.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* release please ([e22cd6a](https://github.com/BigFlubba/ytnoti-discord/commit/e22cd6a9ea36ea9763d72395f90a7dc55415762d))
+
 ## [0.3.3](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.2...v0.3.3) (2026-10-13)
 
 
