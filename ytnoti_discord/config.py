@@ -138,7 +138,7 @@ class EventCfg(_Strict):
 
 
 class ServerCfg(_Section):
-    callback_url: str
+    callback_url: str | None = None
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
     secret: str | None = None
@@ -182,9 +182,16 @@ class ServerCfg(_Section):
     def _empty_log_file(cls, v: Any) -> Any:
         return v or None
 
+    @field_validator("callback_url", mode="before")
+    @classmethod
+    def _empty_callback_url(cls, v: Any) -> Any:
+        return v or None
+
     @field_validator("callback_url")
     @classmethod
-    def _url(cls, v: str) -> str:
+    def _url(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         if not re.match(r"^https?://[^/\s]+", v):
             raise ValueError("must be a full URL such as https://yt.example.com/ytnoti")
         return v
