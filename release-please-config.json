@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "simple",
+  "release-type": "python",
   "pull-request-title-pattern": "release: ${version}",
   "changelog-sections": [
     {
@@ -58,7 +58,7 @@
     ".": {
       "extra-files": [
         {
-          "type": "python",
+          "type": "generic",
           "path": "ytnoti_discord/__init__.py"
         }
       ]
