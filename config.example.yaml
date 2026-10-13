@@ -1,5 +1,6 @@
 # Example configuration file for ytnoti.
 # Set environment variables in your shell or a .env file instead of hardcoding secrets here.
+# Any changes in this file require a service restart to take effect.
 # See Configuration documentation for more details:
 
 server:
@@ -37,11 +38,7 @@ discord:
   avatar_url: "https://example.com/avatar.png"
 
   # Discord allowed-mentions configuration.
-  # Empty parse list prevents broad role/user/everyone parsing.
-  # Use ID based mentions 
-  # Supported values are here, everyone, role, & user.
-  # <@658502865257496606> # user
-  # <@&911408ID422069604413> # role
+  # Supported values are `here`, `everyone`, `<@USER_ID>`, & `<@&ROLE_ID>`
   # Must have Discord developer mode enabled to copy ID's
   allowed_mentions:
     parse: []

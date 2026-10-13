@@ -5,18 +5,30 @@
 </div>
 
 <div align="center">
-
-[![](https://img.shields.io/github/v/release/BigFlubba/ytnoti-discord?style=for-the-badge&color=purple)](https://github.com/BigFlubba/ytnoti-discord/releases)
-[![](https://img.shields.io/github/actions/workflow/status/BigFlubba/ytnoti-discord/release-please.yml?style=for-the-badge)](https://github.com/BigFlubba/ytnoti-discord/actions/workflows/release-please.yml)
-[![](https://img.shields.io/github/license/BigFlubba/ytnoti-discord?style=for-the-badge&color=ee512b)](LICENSE)
-
+  <img alt="GitHub Release" src="https://img.shields.io/github/v/release/BigFlubba/ytnoti-discord?style=flat&label=Release&cacheSeconds=60">
+  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/BigFlubba/ytnoti-discord/release-please.yml?branch=main&style=flat&label=Build&cacheSeconds=60">
+  <img alt="Dynamic JSON Badge" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FBigFlubba%2Fytnoti-discord%2Fytnoti-discord&query=downloadCount&style=flat&logo=docker&label=Downloads&cacheSeconds=60">
+  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/BigFlubba/ytnoti-discord?display_timestamp=committer&style=flat&label=Last%20commit&cacheSeconds=60">
+  <img alt="GitHub License" src="https://img.shields.io/github/license/BigFlubba/ytnoti-discord?style=flat&label=License">
 </div>
 
-Highly configurable self-hosted YouTube notifications for Discord powered by a yaml config file. The Docker service uses YouTube push notifications (WebSub) and wraps the [`ytnoti`](https://github.com/SeoulSKY/ytnoti) library to report uploads, live streams, scheduled streams, edits, and deletions without continuously polling YouTube.
+<p align="center">
+  <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="docs/CONFIGURATION.md"><b>Documentation</b></a>
+</p>
+
+<div align="center">
+
+  Highly configurable self-hosted YouTube notifications for Discord powered by a yaml config file. The Docker service uses YouTube push notifications (WebSub) and wraps the [`ytnoti`](https://github.com/SeoulSKY/ytnoti) library to report uploads, live streams, scheduled streams, edits, and deletions without continuously polling YouTube.
+
+</div>
 
 ---
 
 ## Table of Contents
+
+<details>
+  <summary>click me</summary>
 
 - [ytnoti-discord](#ytnoti-discord)
   - [Table of Contents](#table-of-contents)
@@ -28,14 +40,17 @@ Highly configurable self-hosted YouTube notifications for Discord powered by a y
     - [3. Set the required variables](#3-set-the-required-variables)
     - [4. Make the callback URL reachable](#4-make-the-callback-url-reachable)
     - [5. Run with Docker Compose](#5-run-with-docker-compose)
-    - [6. Validate and test](#6-validate-and-test)
+    - [6. Validate and test (optonal, but recommended)](#6-validate-and-test-optonal-but-recommended)
     - [7. Start the service](#7-start-the-service)
-  - [Configuration options](#configuration-options)
+  - [Documentation](#documentation)
   - [Troubleshooting](#troubleshooting)
   - [Development](#development)
+  - [Legal Use \& Disclaimer](#legal-use--disclaimer)
   - [AI Disclosure](#ai-disclosure)
   - [License](#license)
   - [Star History](#star-history)
+
+</details>
 
 ## Features
 
@@ -57,8 +72,11 @@ Highly configurable self-hosted YouTube notifications for Discord powered by a y
 
 ### 1. Create your files
 
+- Copy the example [`.env.example`](.env.example) file and rename it to `.env`
+- Copy the example [`config.example.yaml`](config.example.yaml) file and rename it to `config.yaml`
+
 ```bash
-cp .env.example .env
+cp .env.example.env
 cp config.example.yaml config.yaml
 ```
 
@@ -121,7 +139,7 @@ volumes:
 
 ```
 
-### 6. Validate and test
+### 6. Validate and test (optonal, but recommended)
 
 - Check `config.yaml` for errors
   - <details>
@@ -199,9 +217,9 @@ docker compose up -d
 
 Stop it with `docker compose down`. Keep the `/data` volume so notification state survives container recreation.
 
-## Configuration options
+## Documentation
 
-For full environment-variable and YAML documentation, see [CONFIGURATION.md](docs/CONFIGURATION.md).
+For a list of environment variables, YAML documentation, and example files, see [CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Troubleshooting
 
@@ -216,9 +234,15 @@ python -m pytest -q
 python -m ytnoti_discord -c config.yaml --check
 ```
 
+## Legal Use & Disclaimer
+
+> [!IMPORTANT]
+> ytnoti-discord is not affiliated with YouTube or the ytnoti Python library. Users are responsible for ensuring their use complies with YouTube's Terms of Service and applicable copyright laws. This tool is intended for personal use only.
+
 ## AI Disclosure
 
-AI was used in the making of this project. Commits are reviewed by a human before being published.
+> [!NOTE]
+> AI models were used in the making of this project. Commits are reviewed and tested by a human before being published.
 
 ## License
 

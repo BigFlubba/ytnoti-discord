@@ -2,7 +2,14 @@
 
 This document covers files and precedence, environment variables, YAML settings, supported event types, message-template variables, environment-variable interpolation, validation behavior, live and upcoming detection, state, logging, & delivery, and command-line options for [ytnoti-discord](https://github.com/BigFlubba/ytnoti-discord).
 
+This document contains expandable sections. Click to expand.
+
 ## Table of Contents
+
+<details>
+  <summary>click to expand</summary>
+
+---
 
 - [Configuration](#configuration)
   - [Table of Contents](#table-of-contents)
@@ -10,7 +17,6 @@ This document covers files and precedence, environment variables, YAML settings,
   - [Environment variables](#environment-variables)
   - [YAML options](#yaml-options)
     - [Required](#required)
-    - [Examples](#examples)
       - [Notes about the example](#notes-about-the-example)
     - [Configuration keys](#configuration-keys)
       - [Root-level keys](#root-level-keys)
@@ -32,6 +38,10 @@ This document covers files and precedence, environment variables, YAML settings,
   - [Live and upcoming detection](#live-and-upcoming-detection)
   - [State, logging, and delivery](#state-logging-and-delivery)
   - [Command-line options](#command-line-options)
+
+---
+
+</details>
 
 ## Files and precedence
 
@@ -86,277 +96,13 @@ channels:
   - id: UC7YMZb0X_W06ToOazhFuXIQ
 ```
 
-### Examples
+<details>
+  <summary>Examples:</summary>
 
 A collection of examples based on your setup.
 
-<details>
-  <summary>Basic (click to open)</summary>
-
-```yaml
-server:
-  # Required: publicly reachable callback URL.
-  callback_url: "${CALLBACK_URL}"
-
-  # Optional shared secret for the notification callback.
-  # Empty/null means the application generates a random secret.
-  secret: "${YTNOTI_SECRET:-}"
-
-  # Optional rotating log file; relative paths are under data_dir.
-  log_file: "${YTNOTI_LOG_FILE:-}"
-
-# Optional YouTube Data API v3 key for live/upcoming detection.
-youtube_api_key: "${YOUTUBE_API_KEY:-}"
-
-discord:
-  # Optional default webhook display name. Overrides Discord webhook defaults.
-  # username: "YouTube Notifications"
-
-  # Optional default webhook avatar URL. Overrides Discord webhook defaults.
-  # avatar_url: "https://example.com/avatar.png"
-
-  # Discord allowed-mentions configuration.
-  # Supported values are `here`, `everyone`, `<@USER_ID>`, & `<@&ROLE_ID>`
-  # Must have Discord developer mode enabled to copy ID's
-  allowed_mentions:
-    parse: []
-
-# Named Discord webhook(s) and their URL's.
-webhooks:
-  main: "${DISCORD_WEBHOOK_URL}"
-
-# Shared settings inherited by channels unless overridden.
-defaults:
-  webhooks:
-    - main
-
-# YouTube channels to monitor.
-channels:
-  - id: "UCuFFtHWoLl5fauMMD5Ww2jA"
-    name: "CBC News"
-```
-
-</details>
-
-<details>
-  <summary>Full (click to open)</summary>
-
-```yaml
-server:
-  # Required: publicly reachable callback URL.
-  callback_url: "${CALLBACK_URL}"
-
-  # HTTP listener.
-  host: "0.0.0.0"
-  port: 8000
-
-  # Optional shared secret for the notification callback.
-  # Empty/null means the application generates a random secret.
-  secret: "${YTNOTI_SECRET:-}"
-
-  # Skip YouTube channel ID verification when necessary. Set to `false` only if a valid ID is incorrectly rejected.
-  verify_channels: true
-
-  # DEBUG, INFO, WARNING, ERROR
-  log_level: "INFO"
-
-  # Validate the config and exit without starting the service.
-  check_only: false
-
-  # false, true, or a list of event names.
-  # Also accepts environment-variable strings such as "upload,live".
-  test_on_start: false
-
-  # Optional rotating log file; relative paths are under data_dir.
-  log_file: "${YTNOTI_LOG_FILE:-}"
-  log_max_bytes: 5000000
-  log_backup_count: 3
-
-# Persistent application state and video history directory.
-data_dir: "/data"
-
-# Optional YouTube Data API v3 key for live/upcoming detection.
-youtube_api_key: "${YOUTUBE_API_KEY:-}"
-
-discord:
-  # Optional default webhook display name. Overrides Discord webhook defaults.
-  username: "YouTube Notifications"
-
-  # Optional default webhook avatar URL. Overrides Discord webhook defaults.
-  avatar_url: "https://example.com/avatar.png"
-
-  # Discord allowed-mentions configuration.
-  # Empty parse list prevents broad role/user/everyone parsing.
-  # Use ID based mentions 
-  # Supported values are here, everyone, role, & user.
-  # <@658502865257496606> # user
-  # <@&911408ID422069604413> # role
-  # Must have Discord developer mode enabled to copy ID's
-  allowed_mentions:
-    parse: []
-
-  # Number of delivery attempts permitted by the sender.
-  max_retries: 5
-
-# Named Discord webhook(s) and their URL's.
-webhooks:
-  main: "${DISCORD_WEBHOOK_URL}"
-  alerts: "${DISCORD_ALERTS_WEBHOOK_URL:-}"
-
-# Shared settings inherited by channels unless overridden.
-defaults:
-  webhooks:
-    - main
-
-  events:
-    upload:
-      enabled: true
-      webhooks: [main]
-      username: "YouTube Uploads"
-      avatar_url: "https://example.com/uploads.png"
-      content: "📺 **{channel_name}** uploaded a new video!"
-      embed:
-        title: "{title}"
-        url: "{url}"
-        description: "A new video is available."
-        color: "#FF0000"
-        author: true
-        image: true
-        thumbnail: false
-        footer: "YouTube Notifications"
-        timestamp: "published"
-        fields:
-          - name: "Channel"
-            value: "[{channel_name}]({channel_url})"
-            inline: true
-          - name: "Video ID"
-            value: "`{video_id}`"
-            inline: true
-
-    live:
-      enabled: true
-      webhooks: [main, alerts]
-      username: "Live Notifications"
-      content: "🔴 **{channel_name}** is live!"
-      embed:
-        title: "{title}"
-        url: "{url}"
-        description: "Watch the live stream now."
-        color: "#E62117"
-        author: true
-        image: false
-        thumbnail: true
-        footer: "Live stream notification"
-        timestamp: "now"
-        fields:
-          - name: "Watch"
-            value: "[Open stream]({url})"
-            inline: true
-
-    upcoming:
-      enabled: false
-      webhooks: [main]
-      content: "📅 **{channel_name}** scheduled a live stream."
-      embed:
-        title: "{title}"
-        url: "{url}"
-        description: "Starts <t:{scheduled_ts}:R>"
-        color: "#3498DB"
-        author: true
-        image: false
-        thumbnail: true
-        footer: "Upcoming stream"
-        timestamp: "now"
-        fields:
-          - name: "Scheduled time"
-            value: "<t:{scheduled_ts}:F>"
-            inline: true
-
-    edit:
-      enabled: true
-      webhooks: [alerts]
-      username: "Video Updates"
-      content: "{change}"
-      cooldown_seconds: 300
-      only_if_title_changed: false
-      show_diff: true
-      embed:
-        title: "✏️ Video updated: {title}"
-        url: "{url}"
-        description: "{change}"
-        color: "#FFA500"
-        author: true
-        image: false
-        thumbnail: true
-        footer: "Video edit notification"
-        timestamp: "updated"
-        fields:
-          - name: "Previous title"
-            value: "{old_title}"
-            inline: false
-          - name: "Current title"
-            value: "{title}"
-            inline: false
-          - name: "Video"
-            value: "[Watch video]({url})"
-            inline: true
-
-    delete:
-      enabled: true
-      webhooks: [alerts]
-      username: "Video Deletions"
-      content: ""
-      embed:
-        title: "🗑️ Video deleted"
-        url: ""
-        description: "**{title}**\n`{video_id}`"
-        color: "#808080"
-        author: true
-        image: false
-        thumbnail: false
-        footer: "Video deletion notification"
-        timestamp: "now"
-        fields:
-          - name: "Channel"
-            value: "{channel_name}"
-            inline: true
-          - name: "Channel ID"
-            value: "`{channel_id}`"
-            inline: true
-
-# YouTube channels to monitor.
-channels:
-  - id: "UCuFFtHWoLl5fauMMD5Ww2jA"
-    name: "CBC News"
-
-    # Optional: overrides defaults.webhooks for this channel.
-    webhooks: [main]
-
-    # Optional per-channel event overrides.
-    # These merge over defaults.events and built-in event settings.
-    events:
-      upload:
-        content: "📺 New upload from **{channel_name}**: {title}"
-        embed:
-          color: "#00AAFF"
-
-      live:
-        webhooks: [alerts]
-        content: "<@&123456789012345678> **{channel_name}** is LIVE: {title}"
-
-      upcoming:
-        enabled: true
-
-      edit:
-        cooldown_seconds: 600
-        only_if_title_changed: false
-        show_diff: true
-
-      delete:
-        enabled: false
-```
-
-</details>
+- [Basic](config-examples/basic-config.example.yaml)
+- [Full](config-examples/basic-config.example.yaml)
 
 #### Notes about the example
 
@@ -367,11 +113,18 @@ channels:
 - `embed: false` can be used for plain-text notifications.
 - Unknown configuration keys are rejected rather than silently ignored.
 
-[🔼 Back to top](#configuration)
+[🔼 Back to `YAML options`](#yaml-options)
+
+</details>
 
 ### Configuration keys
 
 The following tables summarize the configuration keys and the types described by the application's schema.
+
+<details>
+  <summary>click to expand</summary>
+
+---
 
 #### Root-level keys
 
@@ -442,7 +195,9 @@ Each channel entry describes one YouTube channel to monitor.
 | `webhooks` | List of destinations; optional | Overrides the channel's default routing destinations. |
 | `events` | Mapping; optional | Per-channel event overrides. |
 
-Example:
+
+<details>
+  <summary>Example:</summary>
 
 ```yaml
 channels:
@@ -456,7 +211,13 @@ channels:
 
 Replace the placeholder with a real channel ID.
 
-[🔼 Back to top](#configuration)
+</details>
+
+[🔼 Back to `Configuration keys`](#configuration-keys)
+
+---
+
+</details>
 
 ### Supported event types
 
@@ -469,6 +230,11 @@ The five event names supported by the schema are:
 | `upcoming` | Disabled | Notify about an upcoming scheduled stream. |
 | `edit` | Enabled | Notify when video metadata changes. |
 | `delete` | Enabled | Notify when a video is deleted. |
+
+<details>
+  <summary>click to expand</summary>
+
+---
 
 #### Event settings
 
@@ -511,7 +277,9 @@ Each embed field supports:
 | `value` | Required string | Field content. |
 | `inline` | Boolean; default `false` | Whether Discord may display the field inline. |
 
-Example:
+
+<details>
+  <summary>Example:</summary>
 
 ```yaml
 embed:
@@ -532,9 +300,20 @@ embed:
 
 Set `embed: false` on an event to send a plain-text notification instead of an embed.
 
-[🔼 Back to top](#configuration)
+</details>
+
+[🔼 Back to `Supported event types`](#supported-event-types)
+
+---
+
+</details>
 
 ### Message-template variables
+
+<details>
+  <summary>click to expand</summary>
+
+---
 
 Use the following variable names in message content and supported embed text fields, such as `title`, `url`, `description`, `footer`, and field `name` or `value`.
 
@@ -565,11 +344,18 @@ Use the following variable names in message content and supported embed text fie
 - A variable may be valid but not meaningful for every event. For example, `{scheduled_ts}` is intended for scheduled-stream notifications.
 - Unix timestamps can be used with Discord timestamp markup. For example: `<t:{scheduled_ts}:R>`.
 
-[🔼 Back to top](#configuration)
+---
+
+</details>
 
 ### Environment-variable interpolation
 
 The configuration loader supports environment-variable interpolation in YAML strings.
+
+<details>
+  <summary>click to expand</summary>
+
+---
 
 #### Required variable
 
@@ -591,7 +377,8 @@ server:
 
 Environment-variable names start with a letter or underscore and can contain letters, digits, and underscores. The variables are not restricted to a predefined list: choose the names you want to use in YAML and provide them in the application environment.
 
-Common examples include:
+<details>
+  <summary>Common examples include:</summary>
 
 ```yaml
 server:
@@ -605,7 +392,11 @@ webhooks:
   alerts: "${DISCORD_ALERTS_WEBHOOK_URL:-}"
 ```
 
-[🔼 Back to top](#configuration)
+</details>
+
+---
+
+</details>
 
 ### Override and merge behavior
 
@@ -619,7 +410,8 @@ Later settings override earlier values for the same key. Nested embed objects ar
 
 Webhook routing is resolved separately. Event-specific destinations take precedence over channel and global defaults.
 
-For example:
+<details>
+  <summary>For example:</summary>
 
 ```yaml
 defaults:
@@ -640,7 +432,9 @@ channels:
 
 In this example, the channel inherits the default upload settings but uses its own embed color.
 
-[🔼 Back to top](#configuration)
+</details>
+
+[🔼 Back to `YAML options`](#yaml-options)
 
 ---
 
@@ -663,8 +457,6 @@ python -m ytnoti_discord -c config.yaml --check
 
 Check the command-line options for the exact version you have installed if the invocation differs.
 
-[🔼 Back to top](#configuration)
-
 ## Live and upcoming detection
 
 The underlying `ytnoti` push feed does not by itself distinguish normal videos from streams. The service checks stream state on each push:
@@ -674,8 +466,6 @@ The underlying `ytnoti` push feed does not by itself distinguish normal videos f
 
 A scheduled stream is normally silent until it goes live, then one `live` notification is sent. Enable `upcoming` to announce scheduled streams. The end-of-stream feed update is not reported as an edit.
 
-[🔼 Back to top](#configuration)
-
 ## State, logging, and delivery
 
 - Persistent state is stored under `/data` in Docker. Keep this volume to preserve edit snapshots and event state across restarts.
@@ -684,7 +474,6 @@ A scheduled stream is normally silent until it goes live, then one `live` notifi
 - Webhook URLs and API keys are redacted from log files.
 - Discord delivery is retried when appropriate, including rate limits. Failed messages are eventually dropped rather than queued indefinitely.
 
-[🔼 Back to top](#configuration)
 
 ## Command-line options
 
@@ -698,7 +487,9 @@ Run the CLI inside the project/container with `python -m ytnoti_discord`.
 | `--channel CHANNEL_ID` | Restrict test notifications to a specified channel ID. |
 | `--help` | Show CLI help. |
 
-Examples:
+
+<details>
+  <summary>Examples:</summary>
 
 ```bash
 docker compose run --rm ytnoti-discord --check
@@ -708,5 +499,7 @@ docker compose run --rm ytnoti-discord --test --channel UCxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Test notifications use your configured webhooks and templates but are clearly labelled and never ping users or roles by default. The command exits non-zero if any delivery fails.
+
+</details>
 
 [🔼 Back to top](#configuration)

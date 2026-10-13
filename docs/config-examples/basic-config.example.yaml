@@ -1,0 +1,45 @@
+# Example configuration file for ytnoti.
+# Set environment variables in your shell or a .env file instead of hardcoding secrets here.
+# Any changes in this file require a service restart to take effect.
+# See Configuration documentation for more details:
+
+server:
+  # Required: publicly reachable callback URL.
+  callback_url: "${CALLBACK_URL}"
+
+  # Optional shared secret for the notification callback.
+  # Empty/null means the application generates a random secret.
+  secret: "${YTNOTI_SECRET:-}"
+
+  # Optional rotating log file; relative paths are under data_dir.
+  log_file: "${YTNOTI_LOG_FILE:-}"
+
+# Optional YouTube Data API v3 key for live/upcoming detection.
+youtube_api_key: "${YOUTUBE_API_KEY:-}"
+
+discord:
+  # Optional default webhook display name. Overrides Discord webhook defaults.
+  # username: "YouTube Notifications"
+
+  # Optional default webhook avatar URL. Overrides Discord webhook defaults.
+  # avatar_url: "https://example.com/avatar.png"
+
+  # Discord allowed-mentions configuration.
+  # Supported values are `here`, `everyone`, `<@USER_ID>`, & `<@&ROLE_ID>`
+  # Must have Discord developer mode enabled to copy ID's
+  allowed_mentions:
+    parse: []
+
+# Named Discord webhook(s) and their URL's.
+webhooks:
+  main: "${DISCORD_WEBHOOK_URL}"
+
+# Shared settings inherited by channels unless overridden.
+defaults:
+  webhooks:
+    - main
+
+# YouTube channels to monitor.
+channels:
+  - id: "UCuFFtHWoLl5fauMMD5Ww2jA"
+    name: "CBC News"
