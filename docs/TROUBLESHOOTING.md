@@ -55,7 +55,7 @@ Use a YouTube channel ID, not a channel handle or display name. Channel IDs typi
 
 ## Unknown template variable
 
-Use only the variable names listed in [CONFIGURATION.md#Message-template variables](configuration#message-template-variables). Check braces and spelling carefully.
+Use only the variable names listed in [CONFIGURATION.md#Message-template variables](CONFIGURATION.md#message-template-variables). Check braces and spelling carefully.
 
 ## Upcoming notifications are missing
 
