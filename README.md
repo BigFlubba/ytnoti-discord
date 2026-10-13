@@ -1,40 +1,6 @@
-<div align="center">
-
 # ytnoti-discord
 
-</div>
-
-<div align="center">
-
-[![](https://img.shields.io/github/v/release/BigFlubba/ytnoti-discord?style=for-the-badge&color=purple)](https://github.com/BigFlubba/ytnoti-discord/releases)
-[![](https://img.shields.io/github/actions/workflow/status/BigFlubba/ytnoti-discord/release-please.yml?style=for-the-badge)](https://github.com/BigFlubba/ytnoti-discord/actions/workflows/release-please.yml)
-[![](https://img.shields.io/github/license/BigFlubba/ytnoti-discord?style=for-the-badge&color=ee512b)](LICENSE)
-
-</div>
-
-Highly configurable self-hosted YouTube notifications for Discord powered by a yaml config file. The Docker service uses YouTube push notifications (WebSub) and wraps the [`ytnoti`](https://github.com/SeoulSKY/ytnoti) library to report uploads, live streams, scheduled streams, edits, and deletions without continuously polling YouTube.
-
----
-
-## Table of Contents
-
-- [ytnoti-discord](#ytnoti-discord)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Quick start](#quick-start)
-    - [Requirements](#requirements)
-    - [1. Create your files](#1-create-your-files)
-    - [2. Create your Discord webhook](#2-create-your-discord-webhook)
-    - [3. Set the required variables](#3-set-the-required-variables)
-    - [4. Make the callback URL reachable](#4-make-the-callback-url-reachable)
-    - [5. Run with Docker Compose](#5-run-with-docker-compose)
-    - [6. Validate and test](#6-validate-and-test)
-    - [7. Start the service](#7-start-the-service)
-  - [Configuration options](#configuration-options)
-  - [Troubleshooting](#troubleshooting)
-  - [Development](#development)
-  - [AI Disclosure](#ai-disclosure)
-  - [License](#license)
+Self-hosted YouTube notifications for Discord. The Docker service uses YouTube push notifications (WebSub) and wraps the [`ytnoti`](https://github.com/SeoulSKY/ytnoti) library to report uploads, live streams, scheduled streams, edits, and deletions without continuously polling YouTube.
 
 ## Features
 
@@ -52,7 +18,8 @@ Highly configurable self-hosted YouTube notifications for Discord powered by a y
 - Docker & Docker Compose.
 - A Discord webhook URL.
 - One or more YouTube channel IDs (`UC…`, not an `@handle`).
-- A public HTTPS URL that forwards to the container's port `8000` by default.
+- A public HTTPS URL that forwards to the container's port `8000`.
+- Some networking knoladge.
 
 ### 1. Create your files
 
@@ -61,23 +28,15 @@ cp .env.example .env
 cp config.example.yaml config.yaml
 ```
 
-### 2. Create your Discord webhook
+Edit `.env` and set `DISCORD_WEBHOOK_URL` to your Discord webhook URL. Create a webhook in your Discord channel under **Edit Channel → Integrations → Webhooks**.
 
-Create a Discord webhook in your Discord channel under **Edit Channel → Integrations → Webhooks**.
+Edit `config.yaml`:
+- Set `server.callback_url` to the public HTTPS URL that reaches this service, such as `https://yt.example.com/ytnoti`.
+- Replace the example channel ID under `channels` with the YouTube channel ID you want to follow.
 
-### 3. Set the required variables
+### 2. Make the callback URL reachable
 
-1. Edit your `.env` file and set all the required variables.
-2. Edit your `config.yaml` file and replace the example channel ID under `channels` with the YouTube channel ID you want to recieve notifications from.
-
-### 4. Make the callback URL reachable
-
-> [!NOTE]
-> Port forwarding without any protections is not recommended. Use a reverse proxy with rate limiting and the ability to filter IP addresses.
->
-> For an easier setup you can use a service like Cloudflare Tunnels to prevent opening ports and to mask your real IP address.
-
-YouTube's notification hub must be able to reach `server.callback_url`. Configure a reverse proxy or tunnel to forward that URL to the container on port `8000` or your custom port. For example, with Caddy:
+YouTube's notification hub must be able to reach `server.callback_url`. Configure a reverse proxy or tunnel to forward that URL to the container on port `8000`. For example, with Caddy:
 
 ```caddy
 yt.example.com {
@@ -87,7 +46,7 @@ yt.example.com {
 
 Use your actual domain and ensure HTTPS is working. The service checks its callback URL on startup; redirects or an unreachable URL prevent it from becoming healthy.
 
-### 5. Run with Docker Compose
+### 3. Run with Docker Compose
 
 ```yml
 services:
@@ -97,7 +56,7 @@ services:
     restart: unless-stopped
     ports:
       # Behind a reverse proxy on the same host, bind to loopback instead:
-      # - "127.0.0.1:8000:8000"
+      #   - "127.0.0.1:8000:8000"
       - "8000:8000"
     env_file:
       - .env
@@ -120,91 +79,70 @@ volumes:
 
 ```
 
-### 6. Validate and test
+### 4. Validate and test
 
-- Check `config.yaml` for errors
-  - <details>
-      <summary>Via `config.yaml` (click to open)</summary>
+Edit `config.yaml`:
+- Set `server.check_only` to `true`
+- Set `server.test_on_start` to `true`
 
-    1. Edit `config.yaml`
-    2. Set `server.check_only` to `true`
-    3. Save `config.yaml`
-    4. Start the service
-    5. Check the logs for any errors by running
+Or
 
-        ```bash
-        docker logs -f ytnoti-discord
-        ```
-
-    </details>
-
-  - <details>
-      <summary>Via the command line (click to open)</summary>
-
-    1. Run
-
-        ```bash
-        docker run --rm ytnoti-discord --check
-        ```
-
-    2. Check the logs for any errors
-
-    </details>
-
-- Test notifications
-  - <details>
-      <summary>Via `config.yaml` (click to open)</summary>
-
-    1. Edit `config.yaml`
-    2. Set `server.test_on_start` to `true`
-    3. Save `config.yaml`
-    4. Start the service
-    5. Check you can recieve notifications by running
-
-        ```bash
-        docker logs -f ytnoti-discord
-        ```
-
-    6. Check Discord for notifications
-    7. Once the notifications are correct edit `config.yaml`
-    8. Set `server.test_on_start` to `false` or remove the line
-    9. Save `config.yaml`
-    10. Restart the service
-
-    </details>
-
-  - <details>
-      <summary>Via the command line (click to open)</summary>
-
-    1. Run
-
-        ```bash
-        docker run --rm ytnoti-discord --test
-        ```
-
-    2. Check Discord for notifications
-
-    </details>
+```bash
+docker compose run --rm ytnoti-discord --check
+docker compose run --rm ytnoti-discord --test
+```
 
 The check command validates your `config.yaml` file for errors.
 
-The test command sends sample messages for all event types to your configured webhook(s) every time the service starts. Test messages are labelled and do not ping users or roles by default. To let test messages ping (following `discord.allowed_mentions`), set `server.test_allowed_mentions: true`. You can test selected events via:
+The test command sends sample messages for all event types to your configured webhook(s) every time the service starts. Test messages are labelled and do not ping users or roles. You can test selected events via:
 
-### 7. Start the service
+Edit `.env`:
+- Set `server.test_on_start` to `live,upcoming`
+- Once done set `server.test_on_start` to `false` or comment out the line
+
+Or
+
+```bash
+docker compose run --rm ytnoti-discord --test live upcoming
+```
+
+### 5. Start the service
 
 ```bash
 docker compose up -d
+docker compose logs -f ytnoti-discord
 ```
 
 Stop it with `docker compose down`. Keep the `/data` volume so notification state survives container recreation.
 
-## Configuration options
+## Events
 
-For full environment-variable and YAML documentation, see [CONFIGURATION.md](docs/CONFIGURATION.md).
+| Event | Meaning | Default |
+|---|---|---|
+| `upload` | A new video appears | Enabled |
+| `live` | A live stream starts; sent once per stream | Enabled |
+| `upcoming` | A scheduled stream is announced | Disabled |
+| `edit` | Video title, description, or tags change | Enabled |
+| `delete` | A video is removed | Enabled |
+
+For full environment-variable and YAML documentation, see [Configuration reference](docs/CONFIGURATION.md). The example file [`config.example.yaml`](config.example.yaml) also contains inline comments.
+
+## Configuration essentials
+
+- Environment variables can be interpolated in YAML using `${NAME}` or `${NAME:-default}`.
+- `webhooks` defines named Discord webhook URLs. Choose destinations globally, per channel, or per event.
+- Each event can customize `content`, `username`, `avatar_url`, and `embed`. Use `embed: false` to send plain text.
+- Template variables include `{title}`, `{old_title}`, `{change}`, `{url}`, `{video_id}`, `{channel_name}`, `{channel_id}`, `{channel_url}`, `{published}`, `{updated}`, `{published_ts}`, `{updated_ts}`, `{scheduled_ts}`, and `{deleted_ts}`.
+- Role mentions can be used in message content. `@everyone` and `@here` are blocked unless explicitly enabled in `discord.allowed_mentions`.
 
 ## Troubleshooting
 
-See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for details
+- **Callback check fails / container is unhealthy:** verify DNS, HTTPS certificate, reverse-proxy target, and that the callback URL returns HTTP 200 without redirecting. The host must also be able to reach its own public URL.
+- **Subscription fails:** test the callback URL from outside your network and confirm that YouTube can reach it.
+- **A valid channel ID is rejected:** try `server.verify_channels: false`.
+- **Discord returns 401 or 404:** check that the webhook URL is correct and that the webhook still exists.
+- **State is lost after recreation:** ensure `/data` is backed by a persistent Docker volume. For a host bind mount, ensure it is writable by UID `10001`.
+- **Live detection is unreliable:** set `YOUTUBE_API_KEY` in `.env` and configure `youtube_api_key: ${YOUTUBE_API_KEY:-}` in `config.yaml`. Without a key, detection depends on YouTube's public watch page.
 
 ## Development
 

@@ -1,56 +1,106 @@
-# Example configuration file for ytnoti.
-# Set environment variables in your shell or a .env file instead of hardcoding secrets here.
-# See Configuration documentation for more details:
+# ytnoti-discord configuration.
+# Copy this file to config.yaml, then update callback_url and channel IDs.
+#
+# Environment variables may be used anywhere: ${NAME} or ${NAME:-default}.
+# Quote template strings when YAML punctuation could be ambiguous.
+# All edits require a restart of the service to take effect.
 
 server:
-  # Required: publicly reachable callback URL.
-  callback_url: "${CALLBACK_URL}"
+# Required: Callback URL for the service to send notifications to.
+  callback_url: ${CALLBACK_URL:?Callback URL is required. Set CALLBACK_URL in .env or config.yaml.}
 
-  # Optional shared secret for the notification callback.
-  # Empty/null means the application generates a random secret.
-  secret: "${YTNOTI_SECRET:-}"
+  # Optional fixed HMAC secret; otherwise a random secret is generated on startup.
+  secret: ${YTNOTI_SECRET:-}
 
-  # Skip YouTube channel ID verification when necessary. Set to `false` only if a valid ID is incorrectly rejected.
-  verify_channels: true
+  # Log level: DEBUG, INFO, WARNING, or ERROR.
+  log_level: ${LOG_LEVEL:-INFO}
 
-  # DEBUG, INFO, WARNING, ERROR
-  log_level: "INFO"
+  # Disable only if channel-ID verification incorrectly rejects a valid channel.
+  # verify_channels: true
 
-  # Validate the config and exit without starting the service.
-  check_only: false
+  # Validate configuration and exit without starting the server.
+  check_only: ${CHECK_ONLY:-false}
 
-  # false, true, or a list of event names.
-  # Also accepts environment-variable strings such as "upload,live".
-  test_on_start: false
+  # Send test messages at startup: true, false, or a list such as [upload, live].
+  # Every restart sends the samples again; disable after testing.
+  test_on_start: ${YTNOTI_TEST_ON_START:-false}
 
-  # Optional rotating log file; relative paths are under data_dir.
-  log_file: "${YTNOTI_LOG_FILE:-}"
+  # Optional: write rotating logs to a file in addition to console logs.
+  # Relative paths are under data_dir (/data in Docker).
+  # Example: /data/logs/ytnoti-discord.log
+  log_file: ${YTNOTI_LOG_FILE:-}
 
-# Optional YouTube Data API v3 key for live/upcoming detection.
-youtube_api_key: "${YOUTUBE_API_KEY:-}"
+  # Optional: maximum log file size in bytes and number of backups to keep.
+  # log_max_bytes: 5000000
+  # log_backup_count: 3
+
+# Optional: use the official YouTube Data API for more reliable live/upcoming detection.
+# Requires a YouTube Data API v3 key; costs 1 quota unit per push.
+youtube_api_key: ${YOUTUBE_API_KEY:-}
+
+# Give each Discord webhook a short name. Reference these names below.
+webhooks:
+  main: ${MAIN_DISCORD_WEBHOOK_URL:?Main webhook URL is required. Set MAIN_DISCORD_WEBHOOK_URL in .env or config.yaml.}
+  alerts: ${DISCORD_ALERTS_WEBHOOK_URL:-}
 
 discord:
-  # Optional default webhook display name. Overrides Discord webhook defaults.
-  username: "YouTube Notifications"
+  # Optional webhook display name and avatar.
+  username: ${USERNAME:-YouTube Notifications}
+  avatar_url: ${AVATAR_URL:-}
 
-  # Optional default webhook avatar URL. Overrides Discord webhook defaults.
-  avatar_url: "https://example.com/avatar.png"
+  # @everyone and @here are blocked by default. To allow them, uncomment:
+  # allowed_mentions:
+  #   parse: [everyone, roles, users]
 
-  # Discord allowed-mentions configuration.
-  # Empty parse list prevents broad role/user/everyone parsing.
-  # Use ID based mentions 
-  # Supported values are here, everyone, role, & user.
-  # <@658502865257496606> # user
-  # <@&911408ID422069604413> # role
-  # Must have Discord developer mode enabled to copy ID's
-  allowed_mentions:
-    parse: []
+# Defaults apply to every configured channel. Channel/event values override them.
+defaults:
+  webhooks: [main]
+  events:
+    live:
+      enabled: true
+    upload:
+      enabled: true
+    edit:
 
-# Named Discord webhook(s) and their URL's.
-webhooks:
-  main: "${DISCORD_WEBHOOK_URL}"
+    delete:
+      enabled: true
 
-# YouTube channels to monitor.
 channels:
-  - id: "UCuFFtHWoLl5fauMMD5Ww2jA"
-    name: "CBC News"
+  # Use a YouTube channel ID (starts with UC), not an @handle.
+  # Find it via the channel's "Share > Copy channel ID" option.
+  - id: UCuFFtHWoLl5fauMMD5Ww2jA
+    # Optional display name; otherwise the name from YouTube is used.
+    name: CBC News
+
+  # Example: send live alerts to a second webhook and customize the message.
+  # - id: UCxxxxxxxxxxxxxxxxxxxxxx
+  #   webhooks: [main, alerts]
+  #   events:
+  #     live:
+  #       webhooks: [alerts]
+  #       content: "<@&123456789012345678> {channel_name} is LIVE: {title}"
+  #       embed:
+  #         color: "#FF0000"
+  #         fields:
+  #           - name: Watch
+  #             value: "[Open stream]({url})"
+  #             inline: true
+  #     upload:
+  #       content: "{url}"
+  #       embed: false
+  #     delete:
+  #       enabled: false
+
+# Event types: upload, live, upcoming, edit, delete.
+# Per-event options: enabled, webhooks, username, avatar_url, content, embed.
+# embed may be false (plain text) or an object with title, url, description, color,
+# author, image, thumbnail, footer, timestamp (published|updated|now|none), and fields.
+#
+# Template variables:
+# {title} {old_title} {change} {url} {video_id} {thumbnail}
+# {channel_name} {channel_id} {channel_url}
+# {published} {updated}                    ISO 8601 timestamps
+# {published_ts} {updated_ts} {scheduled_ts} {deleted_ts}  Unix timestamps in seconds
+#
+# On edit events, {change} contains the title before/after and available description/tag
+# changes. Set show_diff: false to disable the detailed before/after summary.
