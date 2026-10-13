@@ -10,7 +10,7 @@ def test_minimal_config_gets_sensible_defaults(write_cfg):
     assert [e for e, v in ch.events.items() if v.enabled] == ["upload", "live", "edit", "delete"]
     assert not ch.events["upcoming"].enabled          # off unless asked for
     assert ch.targets["upload"] == [("main", HOOK)]    # single webhook auto-selected
-    assert cfg.discord.allowed_mentions == {"parse": []}
+    assert cfg.discord.allowed_mentions == {"parse": ["roles", "users"]}
 
 
 def test_env_interpolation_and_default(write_cfg, monkeypatch):
