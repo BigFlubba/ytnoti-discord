@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.3](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.2...v0.3.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* fix release please ([2652467](https://github.com/BigFlubba/ytnoti-discord/commit/2652467079ed5ec8026f7676d756985ab1427494))
+* fix release please version bumping in __init__.py ([08bc559](https://github.com/BigFlubba/ytnoti-discord/commit/08bc55961ec30991e0ee66cf3397ecd1b4f06d5f))
+* release please ([73a5ead](https://github.com/BigFlubba/ytnoti-discord/commit/73a5eadaeac44cbe0c368fd8f023659f4697936f))
+* release please ([3d63e29](https://github.com/BigFlubba/ytnoti-discord/commit/3d63e29505899bf5c4fb84d3677b42ff3ca8e61d))
+
 ## [0.3.2](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.1...v0.3.2) (2026-10-13)
 
 
