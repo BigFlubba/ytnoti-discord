@@ -242,7 +242,7 @@ python -m ytnoti_discord -c config.yaml --check
 ## AI Disclosure
 
 > [!NOTE]
-> AI models were used in the making of this project. Commits are reviewed and tested by a human before being published.
+> AI models were used in the making of this project. Commits are reviewed and tested on real hardware by a human before being published.
 
 ## License
 
