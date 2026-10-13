@@ -40,22 +40,28 @@ def test_null_sections_mean_defaults(write_cfg):
 
 
 def test_example_config_is_valid(monkeypatch):
+    # The example config references CALLBACK_URL; set a harmless test value so
+    # loading the example succeeds. The docs allow an empty/placeholder value:
+    # set the env var to an empty string to mirror that behavior.
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", HOOK)
+    monkeypatch.setenv("CALLBACK_URL", "")
     load_config(EXAMPLE)
 
-
 def test_commented_second_channel_example_is_valid_when_uncommented(tmp_path, monkeypatch):
+    # As above, ensure CALLBACK_URL is present so the example config can be
+    # parsed and validated in tests.
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", HOOK)
     monkeypatch.setenv("DISCORD_ALERTS_WEBHOOK_URL", HOOK)
+    monkeypatch.setenv("CALLBACK_URL", "")
     lines, out, in_block = EXAMPLE.read_text().splitlines(), [], False
     for line in lines:
-        if line.startswith("  # Example: send live alerts"):
+        if line.startswith("  # A second channel"):
             in_block = True
-        elif line.startswith("# Event types:"):
+        elif line.startswith("# ----"):
             in_block = False
         if line.startswith("  # webhooks: ") or line.startswith("  # alerts:"):
             line = line.replace("# ", "", 1)
-        elif in_block and re.match(r"^  # ", line) and not line.startswith("  # Example:"):
+        elif in_block and re.match(r"^  # ", line) and not line.startswith("  # A second"):
             line = line.replace("# ", "", 1)
         out.append(line)
     out = [l.replace("  # alerts:", "  alerts:") for l in out]
