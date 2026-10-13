@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.5](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.4...v0.3.5) (2026-10-13)
+
+
+### Documentation
+
+* add star history ([9b8f619](https://github.com/BigFlubba/ytnoti-discord/commit/9b8f619ad7dfb528055a157f71abfb014197dc98))
+* fix broken link ([be2342e](https://github.com/BigFlubba/ytnoti-discord/commit/be2342ebb17fb5e7cfdbd4df1310c4a8ad31957b))
+* update docs ([db876e3](https://github.com/BigFlubba/ytnoti-discord/commit/db876e34d418d3d4da7b4a6fcc732226a918396a))
+* update readme ([2ac1a8a](https://github.com/BigFlubba/ytnoti-discord/commit/2ac1a8aa38cbdb149516df4b17ff90b79775287f))
+
 ## [0.3.4](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.3...v0.3.4) (2026-10-13)
 
 
