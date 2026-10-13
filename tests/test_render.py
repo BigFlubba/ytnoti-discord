@@ -56,7 +56,7 @@ def test_commented_second_channel_example_is_valid_when_uncommented(tmp_path, mo
 
     text = EXAMPLE.read_text()
 
-       # Try to locate the commented "second channel" block robustly.
+    # Try to locate the commented "second channel" block robustly.
     # We look for a header line that mentions "second channel" (case-insensitive),
     # and an ending marker "# ----", a blank line, or the next top-level key.
     start_idx = None
