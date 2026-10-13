@@ -268,7 +268,7 @@ def interpolate(obj: Any) -> Any:
         def sub(m: re.Match[str]) -> str:
             name, default = m.group(1), m.group(2)
             value = os.environ.get(name)
-            if value:
+            if value is not None:
                 return value
             if default is not None:
                 return default
@@ -409,7 +409,7 @@ def load_config(path: str | os.PathLike[str]) -> Config:
                     raise ConfigError(
                         f"{where}.events.{name}.{label}: bad template {template!r} "
                         f"({type(exc).__name__}: {exc}). Use only the documented "
-                        "{variables}; write literal braces as {{ and }}."
+                        "{{variables}}; write literal braces as {{ and }}."
                     ) from exc
 
             events[name] = ev
