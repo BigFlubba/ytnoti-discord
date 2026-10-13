@@ -198,10 +198,8 @@ class ServerCfg(_Section):
 class DiscordCfg(_Section):
     username: str | None = None
     avatar_url: str | None = None
-    # Safe default: roles/users may be pinged, @everyone/@here may not.
-    allowed_mentions: dict[str, Any] = Field(
-        default_factory=lambda: {"parse": ["roles", "users"]}
-    )
+    # Safe default: disable broad parsing unless explicitly configured.
+    allowed_mentions: dict[str, Any] = Field(default_factory=lambda: {"parse": []})
     max_retries: int = Field(default=5, ge=1, le=10)
 
 
