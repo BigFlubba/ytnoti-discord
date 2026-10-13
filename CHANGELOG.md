@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.1](https://github.com/BigFlubba/ytnoti-discord/compare/v0.3.0...v0.3.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* fix test to conform to new config.example.yml format ([a1b92f7](https://github.com/BigFlubba/ytnoti-discord/commit/a1b92f76994be95e4b66a5f0fa0c7448ef7da7f9))
+* fix test to reflect new docs ([a34ad50](https://github.com/BigFlubba/ytnoti-discord/commit/a34ad50f2e4fb31c3783fd13dc83464c7de6aeea))
+* fix testing ([5d40223](https://github.com/BigFlubba/ytnoti-discord/commit/5d4022396e8b592a5000e73f2d7bc4f3b612590f))
+* fix testing ([6de2b64](https://github.com/BigFlubba/ytnoti-discord/commit/6de2b64f6c612413ab58d10b7d7765eef90c5ba5))
+* fix testing ([05285d0](https://github.com/BigFlubba/ytnoti-discord/commit/05285d0b1494f2b30f7a0f9917180666fccfc041))
+* improve tests to max new docs ([4d4975e](https://github.com/BigFlubba/ytnoti-discord/commit/4d4975e52ff246a401b534e28171a656a628699d))
+
+
+### Documentation
+
+* documentation update ([1e1dd97](https://github.com/BigFlubba/ytnoti-discord/commit/1e1dd97fcc4909428ab59e15aa2bbdcbafd9bf6f))
+* documentation upgrade ([742b2f8](https://github.com/BigFlubba/ytnoti-discord/commit/742b2f8db6098f3c537cdd135006529573ce7f3b))
+* fix syntax for comment ([4067e10](https://github.com/BigFlubba/ytnoti-discord/commit/4067e108578ad2c6571dddda170bcf14e49bae56))
+* improve docs ([a738344](https://github.com/BigFlubba/ytnoti-discord/commit/a73834472cc90d5e618de7a70664bbcf21616215))
+* readme update ([402a0ec](https://github.com/BigFlubba/ytnoti-discord/commit/402a0ecfb92256dfd7edd5f70585395b1603a7b8))
+* update docs ([db7b644](https://github.com/BigFlubba/ytnoti-discord/commit/db7b644107cd208f7d4a025cc90d5ca8ab7825eb))
+* update readme ([8a2c31e](https://github.com/BigFlubba/ytnoti-discord/commit/8a2c31e932e6b352cc0d341d99633227c2382825))
+* update release please config ([0f609d2](https://github.com/BigFlubba/ytnoti-discord/commit/0f609d2d673b9c97c4873ef87510d03fd3053ce1))
+
 ## [0.3.0](https://github.com/BigFlubba/ytnoti-discord/compare/v0.2.0...v0.3.0) (2026-10-11)
 
 
