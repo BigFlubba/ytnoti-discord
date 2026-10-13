@@ -68,7 +68,7 @@ def test_new_upload(tmp_path, write_cfg):
     assert "CBC News" in p["content"]                       # configured name wins over feed name
     assert p["embeds"][0]["title"] == "Brand new"
     assert p["embeds"][0]["image"]["url"].endswith("hqdefault.jpg")
-    assert p["allowed_mentions"] == {"parse": ["roles", "users"]}
+    assert p["allowed_mentions"] == {"parse": []}
 
 
 def test_redelivered_upload_push_is_not_announced_twice_or_as_an_edit(tmp_path, write_cfg):
