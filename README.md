@@ -35,6 +35,7 @@ Highly configurable self-hosted YouTube notifications for Discord powered by a y
   - [Development](#development)
   - [AI Disclosure](#ai-disclosure)
   - [License](#license)
+  - [Star History](#star-history)
 
 ## Features
 
@@ -222,3 +223,13 @@ AI was used in the making of this project. Commits are reviewed by a human befor
 ## License
 
 The `ytnoti` library is MIT-licensed by SeoulSKY.
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=bigflubba%2Fytnoti-discord&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bigflubba/ytnoti-discord&type=date&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bigflubba/ytnoti-discord&type=date&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bigflubba/ytnoti-discord&type=date&legend=bottom-right" />
+ </picture>
+</a>
