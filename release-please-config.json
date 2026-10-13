@@ -61,7 +61,7 @@
       "extra-files": [
         {
           "type": "generic",
-          "path": "docs/ytnoti_discord/__init__.py"
+          "path": "ytnoti_discord/__init__.py"
         }
       ]
     }
